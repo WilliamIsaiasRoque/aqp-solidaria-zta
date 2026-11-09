@@ -8,8 +8,11 @@ reales.** Fuente de verdad funcional y técnica: [requirements.md](./requirement
 
 > **Estado actual**: Fase 1 (Setup) y Fase 2 (Foundational: Cognito, API Gateway, DynamoDB, authz)
 > completadas y **desplegadas en AWS** (stage `academic`, región `us-east-2`) — ver
-> [Recursos desplegados](#recursos-desplegados-stage-academic). Las fases 3–7 (proyectos, donaciones,
-> simulación, endurecimiento y cierre) están pendientes.
+> [Recursos desplegados](#recursos-desplegados-stage-academic). Fase 3 (HU-01, HU-02, HU-08, HU-09:
+> catálogo y gestión de proyectos) implementada en código e infraestructura (`infra/template.yaml`
+> ampliado con 5 funciones Lambda nuevas), **pendiente de `sam deploy`** — los recursos de la Fase 3
+> todavía no están en el stack desplegado. Las fases 4–7 (donaciones, simulación, endurecimiento y
+> cierre) están pendientes.
 
 ## Estructura del repositorio
 

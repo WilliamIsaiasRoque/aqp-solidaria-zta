@@ -88,21 +88,21 @@ proyecto, y un visitante sin autenticarse lo ve en el catálogo y en el detalle 
 
 ### Tests para esta fase
 
-- [ ] T024 [P] [HU-01] Escribir y ejecutar **T01** (visitante consulta proyectos → 200, sin borradores) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-01.1, CA-01.2
-- [ ] T025 [P] [HU-08] Escribir y ejecutar **T03** (donante intenta crear proyecto → 403) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-04.1
+- [X] T024 [P] [HU-01] Escribir y ejecutar **T01** (visitante consulta proyectos → 200, sin borradores) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-01.1, CA-01.2 — *evidencia en `evidence/t01-t03-fase3/`; nota de proceso: en esta ejecución el test se escribió después de los handlers T026-T032 (no antes), a diferencia de las Fases 1-2*
+- [X] T025 [P] [HU-08] Escribir y ejecutar **T03** (donante intenta crear proyecto → 403) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-04.1 — *misma nota de proceso que T024; verificación contra el stage real desplegado pendiente (ver `evidence/t01-t03-fase3/README.md`)*
 
 ### Implementación
 
-- [ ] T026 [P] [HU-01] Implementar el modelo de acceso a `Project` (lectura) en `backend/src/projects/repository.ts`, respetando el campo `confirmedAmountCents` como entero y `status` (`BORRADOR`/`PUBLICADO`) de [data-model.md](./data-model.md). **[MVP]** — HU-01, HU-02
-- [ ] T027 [HU-01] Implementar `GET /v1/projects` (público, excluye `BORRADOR`, estado vacío sin errores técnicos si no hay proyectos) en `backend/src/projects/listProjects.ts`. **[MVP]** — CA-01.1, CA-01.2, CA-01.3
-- [ ] T028 [HU-02] Implementar `GET /v1/projects/{projectId}` (público, solo `PUBLICADO`, 404 sin revelar contenido si no existe o no está publicado) en `backend/src/projects/getProject.ts`. **[MVP]** — CA-02.1, CA-02.2
-- [ ] T029 [HU-09] Implementar `GET /v1/projects/{projectId}/stats` (suma excluye `PENDIENTE_SIMULACION` y `RECHAZADA_SIMULADA`, sin identificadores de donantes) en `backend/src/projects/getProjectStats.ts`. **[MVP]** — CA-09.1, CA-09.2
-- [ ] T030 [P] [HU-08] Implementar `POST /v1/projects` (solo grupo `GESTOR`, título + descripción + objetivo PEN positivo, estado inicial `BORRADOR`, 403 para otros roles) en `backend/src/projects/createProject.ts`, usando `backend/src/authz/context.ts` (T016). **[MVP]** — CA-08.1, CA-04.1
-- [ ] T031 [HU-08] Implementar `PATCH /v1/projects/{projectId}/publish` (solo `GESTOR`, 409 si ya está `PUBLICADO`) en `backend/src/projects/publishProject.ts`. **[MVP]** — CA-08.2
-- [ ] T032 [HU-08] Registrar un `AuditEvent` (actor, fecha, acción, resultado) en cada creación y publicación de proyecto, en `backend/src/audit/recordEvent.ts`, consumido por T030 y T031. **[MVP]** — CA-08.3
-- [ ] T033 [P] [HU-01] Implementar la página de catálogo público en `frontend/src/pages/Catalog.tsx` (nombre, finalidad, meta PEN, suma confirmada; estado vacío comprensible). **[MVP]** — CA-01.1, CA-01.3
-- [ ] T034 [P] [HU-02] Implementar la página de detalle de proyecto en `frontend/src/pages/ProjectDetail.tsx` (identificador, descripción, objetivo, estado, monto acumulado, sin datos de donantes). **[MVP]** — CA-02.1
-- [ ] T035 [P] [HU-08] Implementar la página de gestión de proyectos (crear/publicar) en `frontend/src/pages/ManageProjects.tsx`, visible solo a `GESTOR` (guardia de UX, no de seguridad). **[MVP]** — CA-08.1, CA-08.2; Constitución §II (el guard de UI no sustituye a T030/T031)
+- [X] T026 [P] [HU-01] Implementar el modelo de acceso a `Project` (lectura) en `backend/src/projects/repository.ts`, respetando el campo `confirmedAmountCents` como entero y `status` (`BORRADOR`/`PUBLICADO`) de [data-model.md](./data-model.md). **[MVP]** — HU-01, HU-02
+- [X] T027 [HU-01] Implementar `GET /v1/projects` (público, excluye `BORRADOR`, estado vacío sin errores técnicos si no hay proyectos) en `backend/src/projects/listProjects.ts`. **[MVP]** — CA-01.1, CA-01.2, CA-01.3
+- [X] T028 [HU-02] Implementar `GET /v1/projects/{projectId}` (público, solo `PUBLICADO`, 404 sin revelar contenido si no existe o no está publicado) en `backend/src/projects/getProject.ts`. **[MVP]** — CA-02.1, CA-02.2
+- [X] T029 [HU-09] Implementar `GET /v1/projects/{projectId}/stats` (suma excluye `PENDIENTE_SIMULACION` y `RECHAZADA_SIMULADA`, sin identificadores de donantes) en `backend/src/projects/getProjectStats.ts`. **[MVP]** — CA-09.1, CA-09.2
+- [X] T030 [P] [HU-08] Implementar `POST /v1/projects` (solo grupo `GESTOR`, título + descripción + objetivo PEN positivo, estado inicial `BORRADOR`, 403 para otros roles) en `backend/src/projects/createProject.ts`, usando `backend/src/authz/context.ts` (T016). **[MVP]** — CA-08.1, CA-04.1
+- [X] T031 [HU-08] Implementar `PATCH /v1/projects/{projectId}/publish` (solo `GESTOR`, 409 si ya está `PUBLICADO`) en `backend/src/projects/publishProject.ts`. **[MVP]** — CA-08.2
+- [X] T032 [HU-08] Registrar un `AuditEvent` (actor, fecha, acción, resultado) en cada creación y publicación de proyecto, en `backend/src/audit/recordEvent.ts`, consumido por T030 y T031. **[MVP]** — CA-08.3
+- [X] T033 [P] [HU-01] Implementar la página de catálogo público en `frontend/src/pages/Catalog.tsx` (nombre, finalidad, meta PEN, suma confirmada; estado vacío comprensible). **[MVP]** — CA-01.1, CA-01.3
+- [X] T034 [P] [HU-02] Implementar la página de detalle de proyecto en `frontend/src/pages/ProjectDetail.tsx` (identificador, descripción, objetivo, estado, monto acumulado, sin datos de donantes). **[MVP]** — CA-02.1
+- [X] T035 [P] [HU-08] Implementar la página de gestión de proyectos (crear/publicar) en `frontend/src/pages/ManageProjects.tsx`, visible solo a `GESTOR` (guardia de UX, no de seguridad). **[MVP]** — CA-08.1, CA-08.2; Constitución §II (el guard de UI no sustituye a T030/T031) — *tests en `frontend/test/pages/pages.test.tsx` (rojo→verde)*
 
 **Checkpoint**: HU-01, HU-02, HU-08, HU-09 funcionales de forma independiente; T01 y T03 con evidencia
 (design.md §9, día 3).

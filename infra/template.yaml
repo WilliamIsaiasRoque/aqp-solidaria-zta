@@ -283,6 +283,211 @@ Resources:
       RetentionInDays: 14 # RNF-HU-07, CA-NF07.1
 
   # ---------------------------------------------------------------------------------------------
+  # Catálogo y gestión de proyectos — Fase 3 (T026-T032) — [MVP] — HU-01, HU-02, HU-08, HU-09
+  # Mínimo privilegio (RNF-HU-03): las funciones de solo lectura NO tienen permiso de escritura.
+  # ---------------------------------------------------------------------------------------------
+  ListProjectsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - projects/listProjects.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: projects/listProjects.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt ProjectsTable.Arn
+                - !Sub "${ProjectsTable.Arn}/index/status-createdAt"
+      Events:
+        ListProjects:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/projects
+            Method: GET
+
+  GetProjectFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - projects/getProject.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: projects/getProject.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt ProjectsTable.Arn
+      Events:
+        GetProject:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/projects/{projectId}
+            Method: GET
+
+  GetProjectStatsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - projects/getProjectStats.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: projects/getProjectStats.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt ProjectsTable.Arn
+      Events:
+        GetProjectStats:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/projects/{projectId}/stats
+            Method: GET
+
+  CreateProjectFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - projects/createProject.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: projects/createProject.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+          AUDIT_TABLE_NAME: !Ref AuditEventsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt ProjectsTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt AuditEventsTable.Arn
+      Events:
+        CreateProject:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/projects
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/projects.write
+
+  PublishProjectFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - projects/publishProject.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: projects/publishProject.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+          AUDIT_TABLE_NAME: !Ref AuditEventsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt ProjectsTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt AuditEventsTable.Arn
+      Events:
+        PublishProject:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/projects/{projectId}/publish
+            Method: PATCH
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/projects.write
+
+  ListProjectsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ListProjectsFunction}"
+      RetentionInDays: 14
+
+  GetProjectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetProjectFunction}"
+      RetentionInDays: 14
+
+  GetProjectStatsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetProjectStatsFunction}"
+      RetentionInDays: 14
+
+  CreateProjectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${CreateProjectFunction}"
+      RetentionInDays: 14
+
+  PublishProjectFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${PublishProjectFunction}"
+      RetentionInDays: 14
+
+  # ---------------------------------------------------------------------------------------------
   # Frontend (S3 privado + CloudFront con OAC) — T022 — [MVP] — RNF-HU-01, RNF-HU-11
   # ---------------------------------------------------------------------------------------------
   SiteBucket:
