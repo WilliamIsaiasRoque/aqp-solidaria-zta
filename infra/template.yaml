@@ -1,0 +1,391 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Plataforma de Donaciones Seguras — Fundación AQP-SOLIDARIA (Fase 2: infraestructura base y
+  autenticación, design.md §9 día 2). Región fijada por decisión de equipo: us-east-2 (sustituye la
+  recomendación original us-east-1 de design.md AD-06). Despliegue en una sola región, cuenta AWS
+  Free plan (T002-T004, README.md).
+
+Parameters:
+  StageName:
+    Type: String
+    Default: academic
+    AllowedValues:
+      - academic
+    Description: >
+      Stage académico (requirements.md CA-06.1): el endpoint de simulación de confirmación de
+      donaciones (Fase 5) solo se despliega cuando StageName = academic.
+  CognitoDomainPrefix:
+    Type: String
+    Description: >
+      Prefijo único del dominio hosted UI de Cognito (p. ej. aqp-solidaria-academic-<sufijo>).
+      Se fija por el equipo antes del primer despliegue para evitar colisiones globales.
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Timeout: 10
+    MemorySize: 128
+    Tracing: Active
+
+Resources:
+  # ---------------------------------------------------------------------------------------------
+  # Identidad (Amazon Cognito) — T011, T012 — [MVP]
+  # ---------------------------------------------------------------------------------------------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-user-pool"
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      MfaConfiguration: OPTIONAL
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  # NOTA (limitación conocida, docs/threat-model.md): CloudFormation no permite exigir MFA solo a
+  # grupos específicos (GESTOR, AUDITOR) a nivel de User Pool; MfaConfiguration es por pool, no por
+  # grupo. CA-11.1/CA-11.2 se verifican operativamente en la Fase 5 (T057): se activa el MFA TOTP de
+  # forma individual para cada usuario GESTOR/AUDITOR al crearlo, y se evidencia que sin el segundo
+  # factor no se obtienen tokens.
+
+  DonanteGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: DONANTE
+      Description: Donantes autenticados (HU-05, HU-06, HU-07); MFA opcional.
+
+  GestorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: GESTOR
+      Description: Gestores de proyectos (HU-08); MFA obligatorio (CA-11.1).
+
+  AuditorGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: AUDITOR
+      Description: Auditores (HU-10, extensión); MFA obligatorio (CA-11.1).
+
+  ApiResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      Identifier: api
+      Name: !Sub "${AWS::StackName}-api"
+      Scopes:
+        - ScopeName: projects.write
+          ScopeDescription: Crear y publicar proyectos (GESTOR) — HU-08
+        - ScopeName: donations.write
+          ScopeDescription: Crear y simular donaciones (DONANTE) — HU-05, HU-06
+        - ScopeName: donations.read
+          ScopeDescription: Leer historial propio de donaciones (DONANTE) — HU-07
+        - ScopeName: audit.read
+          ScopeDescription: Leer eventos de auditoría (AUDITOR) — HU-10, extensión
+        - ScopeName: system.authcheck
+          ScopeDescription: >
+            Verificación foundational del authorizer (Fase 2, T013/T016/T023); temporal hasta que
+            existan los endpoints de negocio reales.
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: ApiResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: !Sub "${AWS::StackName}-spa-client"
+      GenerateSecret: false
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+        - api/projects.write
+        - api/donations.write
+        - api/donations.read
+        - api/audit.read
+        - api/system.authcheck
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - http://localhost:5173/callback
+      LogoutURLs:
+        - http://localhost:5173/logout
+      PreventUserExistenceErrors: ENABLED
+      AccessTokenValidity: 15
+      IdTokenValidity: 15
+      RefreshTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Ref CognitoDomainPrefix
+
+  # ---------------------------------------------------------------------------------------------
+  # Persistencia (Amazon DynamoDB) — T014 — [MVP] — data-model.md
+  # ---------------------------------------------------------------------------------------------
+  ProjectsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-Projects"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: projectId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: projectId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-createdAt
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  DonationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-Donations"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: donationId
+          AttributeType: S
+        - AttributeName: donorSub
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: donationId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: donorSub-createdAt
+          KeySchema:
+            - AttributeName: donorSub
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  IdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-Idempotency"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  AuditEventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-AuditEvents"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: eventType
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: eventType
+          KeyType: HASH
+        - AttributeName: sk # almacena "timestamp#eventId" (data-model.md)
+          KeyType: RANGE
+
+  # ---------------------------------------------------------------------------------------------
+  # API (Amazon API Gateway HTTP API) — T013 — [MVP] — PEP (design.md §6.1)
+  # ---------------------------------------------------------------------------------------------
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+      Auth:
+        Authorizers:
+          CognitoJwtAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+              audience:
+                - !Ref UserPoolClient
+            IdentitySource: "$request.header.Authorization"
+
+  # ---------------------------------------------------------------------------------------------
+  # Cómputo (AWS Lambda) — T013, T015, T016 — [MVP]
+  # Foundational-only: existe solo para verificar el JWT authorizer (T02, T11) antes de que existan
+  # los endpoints de negocio reales (Fase 3+). Sin política DynamoDB adjunta (mínimo privilegio,
+  # RNF-HU-03 CA-NF03.1/CA-NF03.2): esta función no necesita leer ni escribir ninguna tabla.
+  # ---------------------------------------------------------------------------------------------
+  AuthCheckFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - authz/authCheck.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: authz/authCheck.handler
+      Events:
+        AuthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/_internal/authcheck
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/system.authcheck
+
+  AuthCheckFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AuthCheckFunction}"
+      RetentionInDays: 14 # RNF-HU-07, CA-NF07.1
+
+  # ---------------------------------------------------------------------------------------------
+  # Frontend (S3 privado + CloudFront con OAC) — T022 — [MVP] — RNF-HU-01, RNF-HU-11
+  # ---------------------------------------------------------------------------------------------
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontOAC
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${SiteBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-security-headers"
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: >-
+              default-src 'self'; connect-src 'self' https://cognito-idp.us-east-2.amazonaws.com
+              https://*.amazoncognito.com; img-src 'self' data:; script-src 'self'; style-src 'self';
+              frame-ancestors 'none'; base-uri 'none'
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 63072000
+            IncludeSubdomains: true
+            Preload: true
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: same-origin
+            Override: true
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: SiteOrigin
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: SiteOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized (gestionada por AWS)
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+Outputs:
+  Region:
+    Description: Región fijada por decisión de equipo (us-east-2; sustituye la recomendación us-east-1 de design.md).
+    Value: !Ref AWS::Region
+  HttpApiUrl:
+    Description: URL base del API Gateway HTTP API (stage academic).
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  UserPoolHostedUiDomain:
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+  CloudFrontDomainName:
+    Value: !GetAtt CloudFrontDistribution.DomainName

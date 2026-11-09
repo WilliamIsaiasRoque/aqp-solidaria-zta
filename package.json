@@ -8,11 +8,17 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "echo \"T001-T009 (Fase 1 Setup): sin artefactos de build todavía; se agrega en fases posteriores\""
+    "build": "echo \"Fases 1-2 (Setup/Foundational): sin bundle de frontend/backend todavia; infra/template.yaml se valida con 'sam build' (AWS SAM CLI), no con npm; el bundle de aplicacion se agrega en fases posteriores\""
+  },
+  "dependencies": {
+    "oidc-client-ts": "^3.1.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@types/aws-lambda": "^8.10.147",
     "@types/node": "^22.10.2",
+    "esbuild": "^0.28.2",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",

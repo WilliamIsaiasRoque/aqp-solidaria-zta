@@ -12,7 +12,7 @@
 - **AD-03 — Transacciones simuladas:** donaciones como estados simulados; **no procesar pagos reales**. Una versión productiva requeriría un PSP con tokenización, webhooks firmados, conciliación, antifraude y revisión legal.
 - **AD-04 — Backend autoritativo:** permisos, importes y transiciones se validan solo en servidor; dinero en enteros (céntimos de PEN).
 - **AD-05 — Idempotencia atómica:** reserva de clave y creación de donación en un único `TransactWriteItems` condicionado.
-- **AD-06 — Cuenta AWS Free plan:** una cuenta por equipo, una sola región (recomendado `us-east-1`), usuarios IAM con MFA por integrante. IAM Identity Center, Organizations, Verified Access, GuardDuty y Security Hub **no** están disponibles en el Free plan y quedan fuera del diseño.
+- **AD-06 — Cuenta AWS Free plan:** una cuenta por equipo, una sola región (`us-east-2`, decisión de equipo que sustituye la recomendación original `us-east-1`), usuarios IAM con MFA por integrante. IAM Identity Center, Organizations, Verified Access, GuardDuty y Security Hub **no** están disponibles en el Free plan y quedan fuera del diseño.
 - **AD-07 — Tokens de vida corta:** access token ≤ 15 min y refresh token revocable, porque el JWT authorizer no consulta revocaciones (ver §6.3).
 - **AD-08 — Autorización en dos niveles:** MVP con RBAC + ownership en el módulo `authz`; extensión HU-12 con Amazon Verified Permissions (Cedar) como Policy Engine externo.
 

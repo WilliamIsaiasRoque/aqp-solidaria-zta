@@ -35,3 +35,15 @@ T065 — Fase 6, tras tener los endpoints y pruebas implementados.)_
 - HTTP API no se integra con AWS WAF.
 - Cuenta compartida por el equipo: el aislamiento entre integrantes depende de IAM y de la disciplina del
   equipo.
+- **MFA por grupo (T012, CA-11.1)**: CloudFormation/Cognito no permiten exigir MFA solo a grupos
+  específicos (`GESTOR`, `AUDITOR`) a nivel de User Pool; `MfaConfiguration` se aplica por pool, no por
+  grupo. `infra/template.yaml` habilita `SOFTWARE_TOKEN_MFA` como mecanismo disponible
+  (`MfaConfiguration: OPTIONAL`); la exigencia efectiva para `GESTOR`/`AUDITOR` se activa de forma
+  individual al crear cada usuario de esos grupos y se evidencia operativamente en la Fase 5 (T057:
+  verificación de que un `GESTOR` sin segundo factor no completa el inicio de sesión).
+- **Verificación de T02/T11 en la Fase 2**: `backend/test/integration/auth.test.ts` prueba localmente
+  que el Lambda `authCheck` rechaza (401) un contexto de autorización ausente o un ID token usado como
+  credencial, como defensa adicional (Principio constitucional II — Backend autoritativo). La
+  verificación de extremo a extremo contra el stage `academic` desplegado (incluida la validación de
+  firma que hace el JWT authorizer de API Gateway antes de invocar el Lambda) requiere `sam deploy` con
+  una cuenta AWS real (pendiente de T002, Fase 1) y se documenta en quickstart.md, Escenario 2.
