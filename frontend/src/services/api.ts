@@ -74,3 +74,53 @@ export async function publishProject(
   }
   return (await response.json()) as ProjectSummary;
 }
+
+export interface DonationSummary {
+  donationId: string;
+  projectId: string;
+  donorSub: string;
+  amountCents: number;
+  currency: string;
+  status: "PENDIENTE_SIMULACION" | "CONFIRMADA_SIMULADA" | "RECHAZADA_SIMULADA";
+  createdAt: string;
+}
+
+export interface CreateDonationInput {
+  projectId: string;
+  amountCents: number;
+}
+
+/**
+ * POST /v1/donations (CA-05.1, CA-05.5) — solo DONANTE. Exige `Idempotency-Key`; se genera un UUID
+ * nuevo por envío (CA-05.4, requirements.md HU-05) con `crypto.randomUUID()`.
+ */
+export async function createDonation(
+  accessToken: string,
+  input: CreateDonationInput,
+): Promise<DonationSummary> {
+  const response = await fetch(`${API_BASE_URL}/v1/donations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo registrar la donación (HTTP ${response.status}).`);
+  }
+  return (await response.json()) as DonationSummary;
+}
+
+/** GET /v1/donations/me (CA-07.1) — solo DONANTE; solo devuelve las donaciones propias. */
+export async function fetchMyDonations(accessToken: string): Promise<DonationSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/v1/donations/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el historial de donaciones (HTTP ${response.status}).`);
+  }
+  const data = (await response.json()) as { items: DonationSummary[] };
+  return data.items;
+}

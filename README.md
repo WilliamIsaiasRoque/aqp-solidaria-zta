@@ -6,13 +6,14 @@ reales.** Fuente de verdad funcional y técnica: [requirements.md](./requirement
 [design.md](./design.md). Especificación, plan y tareas de este primer feature:
 [specs/001-plataforma-donaciones-seguras/](./specs/001-plataforma-donaciones-seguras/).
 
-> **Estado actual**: Fase 1 (Setup) y Fase 2 (Foundational: Cognito, API Gateway, DynamoDB, authz)
-> completadas y **desplegadas en AWS** (stage `academic`, región `us-east-2`) — ver
-> [Recursos desplegados](#recursos-desplegados-stage-academic). Fase 3 (HU-01, HU-02, HU-08, HU-09:
-> catálogo y gestión de proyectos) implementada en código e infraestructura (`infra/template.yaml`
-> ampliado con 5 funciones Lambda nuevas), **pendiente de `sam deploy`** — los recursos de la Fase 3
-> todavía no están en el stack desplegado. Las fases 4–7 (donaciones, simulación, endurecimiento y
-> cierre) están pendientes.
+> **Estado actual**: Fases 1 a 3 (Setup; Foundational: Cognito, API Gateway, DynamoDB, authz;
+> catálogo y gestión de proyectos HU-01/HU-02/HU-08/HU-09) completadas y **desplegadas en AWS**
+> (stage `academic`, región `us-east-2`) — ver
+> [Recursos desplegados](#recursos-desplegados-stage-academic). Fase 4 (HU-05, HU-07: donaciones e
+> idempotencia) implementada en código e infraestructura (`infra/template.yaml` ampliado con 3
+> funciones Lambda nuevas y la ruta `GET /v1/donations/{donationId}`, agregada como corrección de
+> una omisión del contrato original — ver `specs/.../contracts/api.md`), **pendiente de
+> `sam deploy`**. Las fases 5–7 (simulación, endurecimiento y cierre) están pendientes.
 
 ## Estructura del repositorio
 
