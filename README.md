@@ -6,9 +6,10 @@ reales.** Fuente de verdad funcional y técnica: [requirements.md](./requirement
 [design.md](./design.md). Especificación, plan y tareas de este primer feature:
 [specs/001-plataforma-donaciones-seguras/](./specs/001-plataforma-donaciones-seguras/).
 
-> **Estado actual**: Fase 1 (Setup, T001–T009 de
-> [tasks.md](./specs/001-plataforma-donaciones-seguras/tasks.md)) completada. Las fases 2–7 (infra,
-> autenticación, proyectos, donaciones, simulación, endurecimiento y cierre) están pendientes.
+> **Estado actual**: Fase 1 (Setup) y Fase 2 (Foundational: Cognito, API Gateway, DynamoDB, authz)
+> completadas y **desplegadas en AWS** (stage `academic`, región `us-east-2`) — ver
+> [Recursos desplegados](#recursos-desplegados-stage-academic). Las fases 3–7 (proyectos, donaciones,
+> simulación, endurecimiento y cierre) están pendientes.
 
 ## Estructura del repositorio
 
@@ -75,10 +76,30 @@ typecheck, test, build) en cada PR y en cada push a `main`.
 | _(pendiente)_ | _(pendiente)_ | _(pendiente)_ | _(pendiente)_ |
 
 **Región fijada**: **`us-east-2`** (decisión de equipo; sustituye la recomendación original `us-east-1`
-de design.md). Queda pendiente que el equipo cree efectivamente la cuenta y confirme la región en la
-consola de AWS.
+de design.md). Confirmado: AWS asigna la región automáticamente según el país de contacto de la cuenta
+(Perú → `us-east-2`) en este tipo de cuenta AWS Free plan 2026; no es configurable sin pasar a una cuenta
+"advanced" (ver [docs oficiales](https://docs.aws.amazon.com/accounts/latest/reference/project-regions.html)).
 
-**Alerta de AWS Budgets**: _(pendiente de completar el Día 1 — registrar el umbral configurado)_.
+**Alerta de AWS Budgets**: configurada — presupuesto `aqp-solidaria-zero-spend`, tipo "Zero spend budget",
+umbral $1.00 USD, notificación a `wroquequi@unsa.edu.pe`.
+
+## Recursos desplegados (stage `academic`)
+
+Desplegado el 2026-11-09 desde AWS CloudShell con `sam deploy --guided` (stack
+`aqp-solidaria-zta-academic`, región `us-east-2`). Salidas de CloudFormation:
+
+| Recurso | Valor |
+|---|---|
+| User Pool ID | `us-east-2_caprohzIP` |
+| User Pool Client ID | `46biqan84afjjvg3gkqnbaf91` |
+| Hosted UI Domain | `https://aqp-solidaria-zta-2026.auth.us-east-2.amazoncognito.com` |
+| CloudFront Domain | `d3if5n1ucewbp.cloudfront.net` |
+| API Gateway (HTTP API) | `https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com` |
+
+Estos valores no son secretos (son identificadores de cliente público con PKCE, sin client secret), pero
+son específicos de esta cuenta — el equipo los reutiliza en la configuración de frontend/backend en las
+fases siguientes en vez de volver a buscarlos. `samconfig.toml` queda en CloudShell para repetir
+`sam deploy` sin las preguntas guiadas.
 
 ## Flujo de trabajo y control de cambios (T005)
 
