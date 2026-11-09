@@ -1,0 +1,37 @@
+# Threat Model — Plataforma de Donaciones Seguras — Fundación AQP-SOLIDARIA
+
+**Estado**: borrador inicial (Fase 1, T008). Se completa en fases posteriores (T017 logging, T056
+limitación de revocación, T060 revisión IAM, T065 mapeo NIST final).
+
+## STRIDE resumido (a completar con detalle por componente en fases posteriores)
+
+| Categoría STRIDE | Amenaza relevante para este sistema | Control previsto | Bloque |
+|---|---|---|---|
+| Spoofing | Suplantar la identidad de un donante o gestor | Amazon Cognito (Authorization Code + PKCE), JWT authorizer | MVP |
+| Tampering | Alterar el monto o el estado de una donación en tránsito o en servidor | Backend autoritativo; dinero en céntimos enteros; `TransactWriteItems` condicionado | MVP |
+| Repudiation | Negar haber realizado una acción crítica (crear/publicar proyecto, confirmar donación) | `AuditEvent` con actor, fecha, acción, resultado | MVP |
+| Information Disclosure | Leer el historial de donaciones de otro usuario (BOLA) o datos de auditoría sensibles | Ownership por `sub`; `AuditEvent` sin tokens/claves/datos financieros | MVP |
+| Denial of Service | Abuso o fuerza bruta contra el login o la API | Throttling del stage HTTP API; protecciones de Cognito | MVP |
+| Elevation of Privilege | Un donante ejecuta una operación reservada a gestor o auditor | RBAC por `cognito:groups`, validado siempre en backend | MVP |
+
+## Mapeo a NIST SP 800-207 (completar en T065; transcrito de design.md §6.1)
+
+| Componente NIST | Implementación prevista |
+|---|---|
+| Policy Enforcement Point (PEP) | API Gateway HTTP API con JWT authorizer y scopes; CloudFront para el frontend |
+| Policy Engine (PE) | Módulo `authz` en Lambda (MVP) o Amazon Verified Permissions con Cedar (extensión HU-12) |
+| Policy Administrator (PA) | Cognito: emite, renueva y revoca tokens de sesión |
+| Fuentes de información | Claims de Cognito, estado del recurso en DynamoDB, logs de CloudWatch y CloudTrail |
+
+_(La tabla completa de los 7 principios de NIST SP 800-207, con evidencia T0x por principio, se añade en
+T065 — Fase 6, tras tener los endpoints y pruebas implementados.)_
+
+## Limitaciones conocidas (transcrito de design.md §6.3; se amplía con evidencia en T056)
+
+- El JWT authorizer valida tokens localmente: un access token revocado sigue siendo válido hasta su
+  expiración (CA-03.4). Mitigación: vida corta del access token (≤ 15 min).
+- Sin postura de dispositivo ni evaluación continua de riesgo (AWS Verified Access y Cognito Plus no
+  disponibles sin costo en el AWS Free plan).
+- HTTP API no se integra con AWS WAF.
+- Cuenta compartida por el equipo: el aislamiento entre integrantes depende de IAM y de la disciplina del
+  equipo.
