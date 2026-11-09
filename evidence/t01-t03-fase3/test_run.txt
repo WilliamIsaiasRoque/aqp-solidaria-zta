@@ -1,0 +1,25 @@
+
+ RUN  v5.1.0 D:/UNSA/5TO AÑO/SEMESTRE 2/TÓPICOS AVANZADOS EN INGENIERÍA DE SOFTWARE/LAB 4/aqp-solidaria-zta
+
+stdout | backend/test/integration/projects.test.ts > T01 — visitante consulta proyectos → 200, sin borradores > devuelve solo proyectos PUBLICADO
+{"timestamp":"2026-11-09T04:28:28.783Z","requestId":"test-request-id","action":"projects.list","outcome":"success","httpStatus":200,"durationMs":0}
+
+stdout | backend/test/integration/projects.test.ts > T01 — visitante consulta proyectos → 200, sin borradores > devuelve una lista vacía sin error técnico cuando no hay proyectos publicados (CA-01.3)
+{"timestamp":"2026-11-09T04:28:28.785Z","requestId":"test-request-id","action":"projects.list","outcome":"success","httpStatus":200,"durationMs":0}
+
+stdout | backend/test/integration/projects.test.ts > T03 — donante intenta crear proyecto → 403 > rechaza con 403 a un usuario sin el grupo GESTOR
+{"timestamp":"2026-11-09T04:28:28.787Z","requestId":"test-request-id","action":"projects.create","outcome":"error","httpStatus":403,"durationMs":1}
+
+stdout | backend/test/integration/projects.test.ts > T03 — donante intenta crear proyecto → 403 > crea el proyecto en BORRADOR y registra auditoría cuando el usuario es GESTOR (CA-08.1, CA-08.3)
+{"timestamp":"2026-11-09T04:28:28.788Z","requestId":"test-request-id","action":"projects.create","outcome":"success","httpStatus":201,"durationMs":1}
+
+ ✓ backend/test/integration/projects.test.ts > T01 — visitante consulta proyectos → 200, sin borradores > devuelve solo proyectos PUBLICADO 5ms
+ ✓ backend/test/integration/projects.test.ts > T01 — visitante consulta proyectos → 200, sin borradores > devuelve una lista vacía sin error técnico cuando no hay proyectos publicados (CA-01.3) 1ms
+ ✓ backend/test/integration/projects.test.ts > T03 — donante intenta crear proyecto → 403 > rechaza con 403 a un usuario sin el grupo GESTOR 1ms
+ ✓ backend/test/integration/projects.test.ts > T03 — donante intenta crear proyecto → 403 > crea el proyecto en BORRADOR y registra auditoría cuando el usuario es GESTOR (CA-08.1, CA-08.3) 2ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  23:28:28
+   Duration  398ms (import 72%, transform 19%, tests 5%, worker 3%)
+

@@ -17,6 +17,24 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/**
+ * RBAC por `cognito:groups` (CA-04.1, CA-04.2): un rol sin el grupo requerido recibe 403, nunca 401.
+ * Se valida siempre en backend, nunca confiando en lo que oculte o muestre la UI (Principio
+ * constitucional II).
+ */
+export class ForbiddenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ForbiddenError";
+  }
+}
+
+export function requireGroup(auth: AuthContext, group: string): void {
+  if (!auth.groups.includes(group)) {
+    throw new ForbiddenError(`Se requiere el grupo '${group}' para esta operación.`);
+  }
+}
+
 export interface AuthContext {
   sub: string;
   groups: string[];
