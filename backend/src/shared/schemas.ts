@@ -24,3 +24,14 @@ export const createProjectSchema = z.object({
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
+/**
+ * Body de `POST /v1/donations` (CA-05.1, CA-05.2): `{ projectId, amountCents }`. `donorSub` NO va
+ * aquí: se obtiene siempre del contexto del authorizer (CA-05.3), nunca del body.
+ */
+export const createDonationSchema = z.object({
+  projectId: z.string().min(1, { message: "projectId es obligatorio." }),
+  amountCents: amountCentsSchema,
+});
+
+export type CreateDonationInput = z.infer<typeof createDonationSchema>;

@@ -52,8 +52,19 @@ métodos ni respuestas adicionales a las ahí definidas. El contrato formal en O
 
 ### GET `/v1/donations/me` — **[MVP]**
 - **Acceso**: scope `api/donations.read` + grupo `DONANTE`.
-- **Respuestas**: `200` / `401`.
-- **Trazabilidad**: HU-07, CA-07.1, CA-07.2, CA-04.2, T09, T12.
+- **Respuestas**: `200` / `401` / `403` (si el llamante no tiene el grupo `DONANTE`, p. ej. un `GESTOR`).
+- **Trazabilidad**: HU-07, CA-07.1, CA-04.2, T12.
+
+### GET `/v1/donations/{donationId}` — **[MVP]** — *corrección de omisión, Fase 4*
+- **Acceso**: scope `api/donations.read` + grupo `DONANTE` propietario.
+- **Respuestas**: `200` / `403` (llamante sin grupo `DONANTE`) / `404` (donación inexistente o de
+  otro propietario — ambos casos devuelven el mismo 404, sin distinguir la causa).
+- **Trazabilidad**: HU-07, CA-07.2, CA-04.2, T09, T12.
+- **Nota**: esta ruta no estaba en la tabla original de design.md §4/contracts/api.md. Se agrega en
+  la Fase 4 porque CA-07.2/T09 ("donante consulta donación ajena") exigen una forma de consultar
+  una donación puntual por su identificador; sin esta ruta esa prueba de ownership (BOLA) no sería
+  ejecutable contra el backend real. Se documenta como corrección de una omisión de planificación
+  de la Fase 1, no como una funcionalidad añadida fuera de alcance.
 
 ### GET `/v1/audit` — **[Extensión — HU-10]**
 - **Acceso**: scope `api/audit.read` + grupo `AUDITOR` (con MFA).

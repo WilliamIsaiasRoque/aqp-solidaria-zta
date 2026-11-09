@@ -120,22 +120,22 @@ payload distinto (409); consulta su historial y no puede ver el de otro donante.
 
 ### Tests para esta fase
 
-- [ ] T036 [P] [HU-05] Escribir y ejecutar **T04** (monto 0, 100001 o no entero → 400) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.2
-- [ ] T037 [P] [HU-05] Escribir y ejecutar **T05** (donante crea intención válida → 201, pendiente, sin cargo) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.1
-- [ ] T038 [P] [HU-05] Escribir y ejecutar **T06** (repite clave y payload idénticos → mismo resultado, una sola donación) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.4
-- [ ] T039 [P] [HU-05] Escribir y ejecutar **T07** (repite clave con payload distinto → 409) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.4
-- [ ] T040 [P] [HU-07] Escribir y ejecutar **T09** (donante consulta donación ajena → 403/404 sin filtración, prueba BOLA) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-07.2
-- [ ] T041 [P] [HU-07] Escribir y ejecutar **T12** (gestor consulta historial de un donante → 403/404) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-04.2
+- [X] T036 [P] [HU-05] Escribir y ejecutar **T04** (monto 0, 100001 o no entero → 400) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.2
+- [X] T037 [P] [HU-05] Escribir y ejecutar **T05** (donante crea intención válida → 201, pendiente, sin cargo) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.1
+- [X] T038 [P] [HU-05] Escribir y ejecutar **T06** (repite clave y payload idénticos → mismo resultado, una sola donación) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.4
+- [X] T039 [P] [HU-05] Escribir y ejecutar **T07** (repite clave con payload distinto → 409) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-05.4
+- [X] T040 [P] [HU-07] Escribir y ejecutar **T09** (donante consulta donación ajena → 403/404 sin filtración, prueba BOLA) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-07.2 — *requirió agregar `GET /v1/donations/{donationId}`, no presente en el contrato original (ver `contracts/api.md`, corrección de omisión)*
+- [X] T041 [P] [HU-07] Escribir y ejecutar **T12** (gestor consulta historial de un donante → 403/404) en `backend/test/integration/donations.test.ts`. **[MVP]** — CA-04.2 — *verificado en ambos endpoints: `GET /v1/donations/me` (403 vía `requireGroup`) y `GET /v1/donations/{donationId}` (403)*
 
 ### Implementación
 
-- [ ] T042 [HU-05] Implementar el modelo de acceso a `Donation` e `IdempotencyRecord` en `backend/src/donations/repository.ts`, con `amountCents` entero entre 100 y 100000 (regla de [data-model.md](./data-model.md)). **[MVP]** — HU-05
-- [ ] T043 [HU-05] Implementar `POST /v1/donations` en `backend/src/donations/createDonation.ts`: valida proyecto `PUBLICADO` (404/409), monto con el esquema Zod de T019 (400 si inválido), exige cabecera `Idempotency-Key` (UUID, 400 si falta), obtiene `donorSub` solo del contexto del authorizer (T016). **[MVP]** — CA-05.1, CA-05.2, CA-05.3, CA-05.5
-- [ ] T044 [HU-05] Implementar en `backend/src/donations/createDonation.ts` la escritura atómica (`TransactWriteItems` condicionado) del `IdempotencyRecord` (`payloadHash` SHA-256) y la `Donation` `PENDIENTE_SIMULACION`: mismo `payloadHash` devuelve la respuesta almacenada; `payloadHash` distinto devuelve 409; falla de condición responde 409 sin efectos parciales. **[MVP]** — CA-05.4; RNF-HU-04 (CA-NF04.2)
-- [ ] T045 [HU-07] Implementar `GET /v1/donations/me` (lista solo registros del `sub` autenticado, con fecha/importe/proyecto/estado) en `backend/src/donations/listMyDonations.ts`. **[MVP]** — CA-07.1
-- [ ] T046 [HU-07] Asegurar en `backend/src/donations/getDonation.ts` que consultar una donación de otro `sub`, o que un `GESTOR` consulte el historial de un donante, responde 403 o 404 sin revelar datos. **[MVP]** — CA-07.2, CA-04.2
-- [ ] T047 [P] [HU-05] Implementar el formulario de donación (React Hook Form + Zod, reutilizando el esquema de T019) en `frontend/src/pages/DonationForm.tsx`, generando un UUID como `Idempotency-Key` por envío. **[MVP]** — CA-05.1, CA-05.5
-- [ ] T048 [P] [HU-07] Implementar la página de historial propio en `frontend/src/pages/MyDonations.tsx` (TanStack Query sobre `GET /v1/donations/me`). **[MVP]** — CA-07.1
+- [X] T042 [HU-05] Implementar el modelo de acceso a `Donation` e `IdempotencyRecord` en `backend/src/donations/repository.ts`, con `amountCents` entero entre 100 y 100000 (regla de [data-model.md](./data-model.md)). **[MVP]** — HU-05
+- [X] T043 [HU-05] Implementar `POST /v1/donations` en `backend/src/donations/createDonation.ts`: valida proyecto `PUBLICADO` (404/409), monto con el esquema Zod de T019 (400 si inválido), exige cabecera `Idempotency-Key` (UUID, 400 si falta), obtiene `donorSub` solo del contexto del authorizer (T016). **[MVP]** — CA-05.1, CA-05.2, CA-05.3, CA-05.5
+- [X] T044 [HU-05] Implementar en `backend/src/donations/createDonation.ts` la escritura atómica (`TransactWriteItems` condicionado) del `IdempotencyRecord` (`payloadHash` SHA-256) y la `Donation` `PENDIENTE_SIMULACION`: mismo `payloadHash` devuelve la respuesta almacenada; `payloadHash` distinto devuelve 409; falla de condición responde 409 sin efectos parciales. **[MVP]** — CA-05.4; RNF-HU-04 (CA-NF04.2) — *la desambiguación duplicado/conflicto hace una lectura posterior a la transacción fallida (no forma parte de la escritura atómica en sí, que ya quedó resuelta por DynamoDB)*
+- [X] T045 [HU-07] Implementar `GET /v1/donations/me` (lista solo registros del `sub` autenticado, con fecha/importe/proyecto/estado) en `backend/src/donations/listMyDonations.ts`. **[MVP]** — CA-07.1
+- [X] T046 [HU-07] Asegurar en `backend/src/donations/getDonation.ts` que consultar una donación de otro `sub`, o que un `GESTOR` consulte el historial de un donante, responde 403 o 404 sin revelar datos. **[MVP]** — CA-07.2, CA-04.2 — *se agregó la ruta `GET /v1/donations/{donationId}` a `infra/template.yaml` y `contracts/api.md` para que esta tarea sea ejecutable como endpoint real, no solo como función interna*
+- [X] T047 [P] [HU-05] Implementar el formulario de donación (React Hook Form + Zod, reutilizando el esquema de T019) en `frontend/src/pages/DonationForm.tsx`, generando un UUID como `Idempotency-Key` por envío. **[MVP]** — CA-05.1, CA-05.5
+- [X] T048 [P] [HU-07] Implementar la página de historial propio en `frontend/src/pages/MyDonations.tsx` (TanStack Query sobre `GET /v1/donations/me`). **[MVP]** — CA-07.1
 
 **Checkpoint**: HU-05 y HU-07 funcionales de forma independiente; T04–T07, T09, T12 con evidencia
 (design.md §9, día 4).

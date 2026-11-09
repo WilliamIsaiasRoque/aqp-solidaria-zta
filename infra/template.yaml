@@ -488,6 +488,141 @@ Resources:
       RetentionInDays: 14
 
   # ---------------------------------------------------------------------------------------------
+  # Donaciones e idempotencia — Fase 4 (T042-T046) — [MVP] — HU-05, HU-07
+  # Mínimo privilegio (RNF-HU-03): cada función solo recibe las acciones y tablas que necesita.
+  # ---------------------------------------------------------------------------------------------
+  CreateDonationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - donations/createDonation.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: donations/createDonation.handler
+      Environment:
+        Variables:
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+          DONATIONS_TABLE_NAME: !Ref DonationsTable
+          IDEMPOTENCY_TABLE_NAME: !Ref IdempotencyTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt ProjectsTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt DonationsTable.Arn
+                - !GetAtt IdempotencyTable.Arn
+      Events:
+        CreateDonation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/donations
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/donations.write
+
+  ListMyDonationsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - donations/listMyDonations.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: donations/listMyDonations.handler
+      Environment:
+        Variables:
+          DONATIONS_TABLE_NAME: !Ref DonationsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt DonationsTable.Arn
+                - !Sub "${DonationsTable.Arn}/index/donorSub-createdAt"
+      Events:
+        ListMyDonations:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/donations/me
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/donations.read
+
+  GetDonationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - donations/getDonation.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: donations/getDonation.handler
+      Environment:
+        Variables:
+          DONATIONS_TABLE_NAME: !Ref DonationsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt DonationsTable.Arn
+      Events:
+        GetDonation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/donations/{donationId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/donations.read
+
+  CreateDonationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${CreateDonationFunction}"
+      RetentionInDays: 14
+
+  ListMyDonationsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ListMyDonationsFunction}"
+      RetentionInDays: 14
+
+  GetDonationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetDonationFunction}"
+      RetentionInDays: 14
+
+  # ---------------------------------------------------------------------------------------------
   # Frontend (S3 privado + CloudFront con OAC) — T022 — [MVP] — RNF-HU-01, RNF-HU-11
   # ---------------------------------------------------------------------------------------------
   SiteBucket:
