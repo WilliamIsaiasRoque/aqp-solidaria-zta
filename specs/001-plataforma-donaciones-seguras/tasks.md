@@ -88,8 +88,8 @@ proyecto, y un visitante sin autenticarse lo ve en el catálogo y en el detalle 
 
 ### Tests para esta fase
 
-- [X] T024 [P] [HU-01] Escribir y ejecutar **T01** (visitante consulta proyectos → 200, sin borradores) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-01.1, CA-01.2 — *evidencia en `evidence/t01-t03-fase3/`; nota de proceso: en esta ejecución el test se escribió después de los handlers T026-T032 (no antes), a diferencia de las Fases 1-2*
-- [X] T025 [P] [HU-08] Escribir y ejecutar **T03** (donante intenta crear proyecto → 403) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-04.1 — *misma nota de proceso que T024; verificación contra el stage real desplegado pendiente (ver `evidence/t01-t03-fase3/README.md`)*
+- [X] T024 [P] [HU-01] Escribir y ejecutar **T01** (visitante consulta proyectos → 200, sin borradores) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-01.1, CA-01.2 — *prueba local (datos mixtos) + verificación real contra el stage `academic` desplegado (`GET /academic/v1/projects` → 200); evidencia en `evidence/t01-t03-fase3/`. El "sin borradores" con datos reales queda pendiente de que exista al menos un proyecto `BORRADOR` creado en la cuenta (tabla vacía en esta corrida). Nota de proceso: el test se escribió después de los handlers T026-T032, a diferencia de las Fases 1-2*
+- [X] T025 [P] [HU-08] Escribir y ejecutar **T03** (donante intenta crear proyecto → 403) en `backend/test/integration/projects.test.ts`, con evidencia en `evidence/`. **[MVP]** — CA-04.1 — *confirmado por prueba local (403 FORBIDDEN). Verificación real contra el stage desplegado PARCIALMENTE VERIFICADA por decisión de equipo: `POST /v1/projects` exige un access token válido (401 sin token, confirmado en real); el 403 para un DONANTE autenticado queda pendiente a propósito hasta la Fase 4/5, cuando exista login real de prueba end-to-end con el frontend desplegado — ver `evidence/t01-t03-fase3/README.md` §1*
 
 ### Implementación
 
