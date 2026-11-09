@@ -1,0 +1,8 @@
+HTTP/2 401 
+date: Mon, 09 Nov 2026 03:38:23 GMT
+content-type: application/json
+content-length: 26
+www-authenticate: Bearer scope="api/system.authcheck" error="invalid_token" error_description="no "kid" provided in the JWT"
+apigw-requestid: Gjb3egNeiYcEP6A=
+
+{"message":"Unauthorized"}

@@ -43,7 +43,10 @@ T065 — Fase 6, tras tener los endpoints y pruebas implementados.)_
   verificación de que un `GESTOR` sin segundo factor no completa el inicio de sesión).
 - **Verificación de T02/T11 en la Fase 2**: `backend/test/integration/auth.test.ts` prueba localmente
   que el Lambda `authCheck` rechaza (401) un contexto de autorización ausente o un ID token usado como
-  credencial, como defensa adicional (Principio constitucional II — Backend autoritativo). La
-  verificación de extremo a extremo contra el stage `academic` desplegado (incluida la validación de
-  firma que hace el JWT authorizer de API Gateway antes de invocar el Lambda) requiere `sam deploy` con
-  una cuenta AWS real (pendiente de T002, Fase 1) y se documenta en quickstart.md, Escenario 2.
+  credencial, como defensa adicional (Principio constitucional II — Backend autoritativo). Además, tras
+  el despliegue del stage `academic` en `us-east-2`
+  (`https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com`), se verificó de extremo a extremo contra el
+  JWT authorizer real de API Gateway: **T02** (sin token) y **T11** con un token de firma alterada y con
+  un token malformado devuelven 401 nativo del authorizer, antes de invocar el Lambda — evidencia en
+  `evidence/t02-t11-fase2/`. Queda pendiente únicamente la variante de T11 con un ID token real emitido
+  por Cognito (requiere un login genuino de un usuario de prueba, disponible a partir de la Fase 3+).

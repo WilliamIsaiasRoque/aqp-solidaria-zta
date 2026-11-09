@@ -1,0 +1,8 @@
+HTTP/2 401 
+date: Mon, 09 Nov 2026 03:38:30 GMT
+content-type: application/json
+content-length: 26
+www-authenticate: Bearer scope="api/system.authcheck" error="invalid_token" error_description="token contains an invalid number of segments"
+apigw-requestid: Gjb4kiyPiYcEP-w=
+
+{"message":"Unauthorized"}
