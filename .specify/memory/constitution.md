@@ -115,7 +115,8 @@ en el compromiso de todo el sistema, violando el principio Zero Trust de "asumir
 ### VI. Cuenta AWS Free plan única
 
 El proyecto se despliega en una única cuenta AWS Free plan compartida por el equipo, en una sola
-región (recomendado `us-east-1`), con una alerta configurada en AWS Budgets (AD-06, CA-NF09.1).
+región (`us-east-2`, decisión de equipo que sustituye la recomendación original `us-east-1` de
+design.md), con una alerta configurada en AWS Budgets (AD-06, CA-NF09.1).
 Antes de desplegar cualquier servicio, el equipo DEBE verificar que esté incluido en la lista
 oficial de servicios del AWS Free plan. Quedan excluidos del diseño los servicios no disponibles
 en el Free plan: IAM Identity Center, AWS Organizations, AWS Verified Access, GuardDuty y Security

@@ -39,7 +39,8 @@ estable es 7.0.x) — **[MVP]** (design.md §2).
 **Testing**: Vitest 5.x + Testing Library + Bruno/Postman (unitarias, UI, API negativas) — **[MVP]**
 (design.md §2, §9).
 
-**Target Platform**: AWS Free plan, una sola región (recomendado `us-east-1`); frontend en S3 privado +
+**Target Platform**: AWS Free plan, una sola región (`us-east-2`, decisión de equipo que sustituye la
+recomendación original `us-east-1` de design.md); frontend en S3 privado +
 CloudFront con OAC; backend en AWS Lambda detrás de API Gateway HTTP API — **[MVP]** (design.md §2, §6).
 
 **Project Type**: aplicación web (frontend SPA + backend serverless) — **[MVP]** (design.md §1 AD-02).
@@ -139,8 +140,9 @@ ninguna carpeta ni capa adicional no mencionada en design.md.
   dinero en enteros (céntimos de PEN).
 - **AD-05 — Idempotencia atómica [MVP]**: reserva de clave y creación de donación en un único
   `TransactWriteItems` condicionado.
-- **AD-06 — Cuenta AWS Free plan [MVP]**: una cuenta por equipo, una sola región (recomendado
-  `us-east-1`), usuarios IAM con MFA por integrante. IAM Identity Center, Organizations, Verified Access,
+- **AD-06 — Cuenta AWS Free plan [MVP]**: una cuenta por equipo, una sola región (`us-east-2`, decisión
+  de equipo que sustituye la recomendación original `us-east-1`), usuarios IAM con MFA por integrante.
+  IAM Identity Center, Organizations, Verified Access,
   GuardDuty y Security Hub no están disponibles en el Free plan y quedan fuera del diseño.
 - **AD-07 — Tokens de vida corta [MVP]**: access token ≤ 15 min y refresh token revocable, porque el JWT
   authorizer no consulta revocaciones.

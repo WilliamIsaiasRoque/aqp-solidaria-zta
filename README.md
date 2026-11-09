@@ -57,8 +57,9 @@ typecheck, test, build) en cada PR y en cada push a `main`.
    acceso de larga duración**; para despliegues se usan AWS CloudShell o credenciales temporales
    (design.md §7). Cada integrante registra en este README el usuario IAM que le corresponde (nombre de
    usuario, sin credenciales).
-3. **Día 1 (T004)** — Se fija **una sola región** para todo el proyecto (recomendado `us-east-1`) y se
-   configura una **alerta en AWS Budgets** antes de desplegar cualquier recurso.
+3. **Día 1 (T004)** — Se fija **una sola región** para todo el proyecto: **`us-east-2`** (decisión de
+   equipo que sustituye la recomendación original `us-east-1` de design.md; `infra/template.yaml` usa
+   esta región) y se configura una **alerta en AWS Budgets** antes de desplegar cualquier recurso.
 4. Antes de desplegar cualquier servicio (a partir de la Fase 2), se verifica que esté incluido en la
    [lista oficial de servicios del AWS Free plan](https://docs.aws.amazon.com/accounts/latest/reference/supported-services-sign-up-new.html).
    Quedan excluidos del diseño: IAM Identity Center, AWS Organizations, AWS Verified Access, GuardDuty y
@@ -73,7 +74,9 @@ typecheck, test, build) en cada PR y en cada push a `main`.
 |---|---|---|:---:|
 | _(pendiente)_ | _(pendiente)_ | _(pendiente)_ | _(pendiente)_ |
 
-**Región fijada**: _(pendiente de completar el Día 1 — recomendado `us-east-1`)_.
+**Región fijada**: **`us-east-2`** (decisión de equipo; sustituye la recomendación original `us-east-1`
+de design.md). Queda pendiente que el equipo cree efectivamente la cuenta y confirme la región en la
+consola de AWS.
 
 **Alerta de AWS Budgets**: _(pendiente de completar el Día 1 — registrar el umbral configurado)_.
 

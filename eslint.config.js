@@ -10,7 +10,7 @@ export default tseslint.config(
       "coverage/**",
       "frontend/dist/**",
       "backend/dist/**",
-      ".aws-sam/**",
+      "**/.aws-sam/**",
     ],
   },
   js.configs.recommended,
