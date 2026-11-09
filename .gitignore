@@ -1,0 +1,29 @@
+# Node / TypeScript
+node_modules/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# Vite (frontend)
+frontend/dist/
+frontend/.vite/
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Evidencia local no sanitizada (solo se versiona lo revisado manualmente)
+evidence/raw/

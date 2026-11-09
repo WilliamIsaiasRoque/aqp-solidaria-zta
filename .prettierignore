@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+coverage/
+frontend/dist/
+package-lock.json
+.aws-sam/
