@@ -54,6 +54,10 @@ Resources:
       MfaConfiguration: OPTIONAL
       EnabledMfas:
         - SOFTWARE_TOKEN_MFA
+      LambdaConfig:
+        # T057: bloquea el login de GESTOR/AUDITOR sin MFA configurado (ver MfaEnforcementFunction
+        # más abajo). Resuelve la limitación "MFA por grupo" documentada en docs/threat-model.md.
+        PreAuthentication: !GetAtt MfaEnforcementFunction.Arn
       Policies:
         PasswordPolicy:
           MinimumLength: 12
@@ -66,11 +70,9 @@ Resources:
           - Name: verified_email
             Priority: 1
 
-  # NOTA (limitación conocida, docs/threat-model.md): CloudFormation no permite exigir MFA solo a
-  # grupos específicos (GESTOR, AUDITOR) a nivel de User Pool; MfaConfiguration es por pool, no por
-  # grupo. CA-11.1/CA-11.2 se verifican operativamente en la Fase 5 (T057): se activa el MFA TOTP de
-  # forma individual para cada usuario GESTOR/AUDITOR al crearlo, y se evidencia que sin el segundo
-  # factor no se obtienen tokens.
+  # NOTA (docs/threat-model.md): `MfaConfiguration` de Cognito es por pool, no por grupo; por eso
+  # CA-11.1/CA-11.2 se exigen por grupo mediante el trigger PreAuthentication `MfaEnforcementFunction`
+  # (T057) en vez de una propiedad declarativa del User Pool.
 
   DonanteGroup:
     Type: AWS::Cognito::UserPoolGroup
@@ -159,6 +161,54 @@ Resources:
     Properties:
       UserPoolId: !Ref UserPool
       Domain: !Ref CognitoDomainPrefix
+
+  # ---------------------------------------------------------------------------------------------
+  # Enforcement de MFA por grupo — Fase 5 (T057) — [MVP] — HU-11, CA-11.1/CA-11.2
+  # Trigger PreAuthentication: bloquea POR COMPLETO el login (sin emitir tokens) de un usuario de
+  # los grupos GESTOR o AUDITOR que no tenga SOFTWARE_TOKEN_MFA configurado.
+  #
+  # Mínimo privilegio con una excepción justificada (RNF-HU-03, CA-NF03.2): el recurso IAM usa
+  # "userpool/*" (en vez de la ARN exacta del UserPool) porque referenciar `!GetAtt UserPool.Arn`
+  # aquí crearía una dependencia circular con `UserPool.LambdaConfig.PreAuthentication` (que a su
+  # vez referencia esta función) — es el patrón estándar documentado por AWS para este caso. El
+  # wildcard solo cubre el segmento del ID del pool, no la cuenta ni la región; en esta cuenta
+  # dedicada de Fundación AQP-SOLIDARIA solo existe un User Pool, por lo que el alcance real es el
+  # mismo que una ARN exacta.
+  # ---------------------------------------------------------------------------------------------
+  MfaEnforcementFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - authz/mfaEnforcement.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: authz/mfaEnforcement.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminListGroupsForUser
+                - cognito-idp:AdminGetUser
+              Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+
+  MfaEnforcementFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${MfaEnforcementFunction}"
+      RetentionInDays: 14
+
+  MfaEnforcementInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref MfaEnforcementFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
 
   # ---------------------------------------------------------------------------------------------
   # Persistencia (Amazon DynamoDB) — T014 — [MVP] — data-model.md
