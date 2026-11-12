@@ -13,21 +13,37 @@ export function MyDonations({ accessToken }: { accessToken: string }) {
   });
 
   if (isLoading) {
-    return <p>Cargando historial…</p>;
+    return (
+      <p className="loading-state" role="status">
+        Cargando historial…
+      </p>
+    );
   }
 
   if (isError) {
-    return <p role="alert">No se pudo cargar tu historial de donaciones.</p>;
+    return (
+      <p className="notice-card" role="alert">
+        No se pudo cargar tu historial de donaciones.
+      </p>
+    );
   }
 
   const donations = data ?? [];
 
   if (donations.length === 0) {
-    return <p data-testid="empty-donations">Todavía no registraste ninguna donación.</p>;
+    return (
+      <div className="empty-panel" data-testid="empty-donations">
+        <div className="empty-icon" aria-hidden="true">
+          ✳
+        </div>
+        <h3>Tu historia empieza aquí</h3>
+        <p>Todavía no registraste ninguna donación.</p>
+      </div>
+    );
   }
 
   return (
-    <ul aria-label="Mis donaciones">
+    <ul className="donation-list" aria-label="Mis donaciones">
       {donations.map((donation) => (
         <li key={donation.donationId}>
           <p>Fecha: {new Date(donation.createdAt).toLocaleDateString()}</p>
@@ -35,7 +51,9 @@ export function MyDonations({ accessToken }: { accessToken: string }) {
           <p>Importe: S/ {(donation.amountCents / 100).toFixed(2)}</p>
           <p>Estado: {donation.status}</p>
           {donation.status !== "PENDIENTE_SIMULACION" && (
-            <p>«Simulación académica: no se ha realizado ningún cobro».</p>
+            <p className="simulation-note">
+              «Simulación académica: no se ha realizado ningún cobro».
+            </p>
           )}
         </li>
       ))}

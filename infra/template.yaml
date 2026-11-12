@@ -20,6 +20,10 @@ Parameters:
     Description: >
       Prefijo único del dominio hosted UI de Cognito (p. ej. aqp-solidaria-academic-<sufijo>).
       Se fija por el equipo antes del primer despliegue para evitar colisiones globales.
+  SpaOrigin:
+    Type: String
+    Default: https://d3if5n1ucewbp.cloudfront.net
+    Description: Origen HTTPS público de la SPA, sin barra final; usado en Cognito y CORS.
 
 Conditions:
   # CA-06.1: el endpoint de simulación de confirmación de donaciones SOLO existe cuando el stage
@@ -130,8 +134,12 @@ Resources:
         - COGNITO
       CallbackURLs:
         - http://localhost:5173/callback
+        - http://127.0.0.1:5173/callback
+        - !Sub "${SpaOrigin}/callback"
       LogoutURLs:
         - http://localhost:5173/logout
+        - http://127.0.0.1:5173/logout
+        - !Sub "${SpaOrigin}/logout"
       PreventUserExistenceErrors: ENABLED
       AccessTokenValidity: 15
       IdTokenValidity: 15
@@ -241,6 +249,14 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - http://localhost:5173
+          - http://127.0.0.1:5173
+          - !Ref SpaOrigin
+        AllowMethods: [GET, POST, PATCH, OPTIONS]
+        AllowHeaders: [Authorization, Content-Type, Idempotency-Key]
+        MaxAge: 600
       Auth:
         Authorizers:
           CognitoJwtAuthorizer:
@@ -731,10 +747,11 @@ Resources:
         Name: !Sub "${AWS::StackName}-security-headers"
         SecurityHeadersConfig:
           ContentSecurityPolicy:
-            ContentSecurityPolicy: >-
-              default-src 'self'; connect-src 'self' https://cognito-idp.us-east-2.amazonaws.com
-              https://*.amazoncognito.com; img-src 'self' data:; script-src 'self'; style-src 'self';
-              frame-ancestors 'none'; base-uri 'none'
+            ContentSecurityPolicy: !Sub >-
+              default-src 'self'; connect-src 'self' https://cognito-idp.${AWS::Region}.amazonaws.com
+              https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+              https://*.amazoncognito.com; img-src 'self' data:; font-src 'self'; script-src 'self';
+              style-src 'self'; frame-ancestors 'none'; base-uri 'none'
             Override: true
           StrictTransportSecurity:
             AccessControlMaxAgeSec: 63072000
@@ -789,3 +806,7 @@ Outputs:
     Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
   CloudFrontDomainName:
     Value: !GetAtt CloudFrontDistribution.DomainName
+  CloudFrontDistributionId:
+    Value: !Ref CloudFrontDistribution
+  SiteBucketName:
+    Value: !Ref SiteBucket

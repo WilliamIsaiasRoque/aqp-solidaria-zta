@@ -17,13 +17,7 @@ interface FormFields {
  * `backend/src/shared/schemas.ts`, conforme a design.md §2 ("los esquemas Zod se reutilizan en
  * backend").
  */
-export function ManageProjects({
-  accessToken,
-  groups,
-}: {
-  accessToken: string;
-  groups: string[];
-}) {
+export function ManageProjects({ accessToken, groups }: { accessToken: string; groups: string[] }) {
   const [created, setCreated] = useState<ProjectSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const {
@@ -33,7 +27,11 @@ export function ManageProjects({
   } = useForm<FormFields>();
 
   if (!groups.includes("GESTOR")) {
-    return <p role="alert">Esta sección es solo para gestores.</p>;
+    return (
+      <p className="notice-card" role="alert">
+        Esta sección es solo para gestores.
+      </p>
+    );
   }
 
   const onSubmit = async (values: FormFields) => {
@@ -68,20 +66,21 @@ export function ManageProjects({
 
   return (
     <div>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <label>
+      <form className="form-panel" onSubmit={handleSubmit(onSubmit)}>
+        <h2>Nuevo proyecto</h2>
+        <label className="form-field">
           Título
           <input {...register("title", { required: "El título es obligatorio." })} />
         </label>
         {errors.title && <span role="alert">{errors.title.message}</span>}
 
-        <label>
+        <label className="form-field">
           Descripción
           <textarea {...register("description", { required: "La descripción es obligatoria." })} />
         </label>
         {errors.description && <span role="alert">{errors.description.message}</span>}
 
-        <label>
+        <label className="form-field">
           Objetivo (céntimos PEN)
           <input
             type="number"
@@ -90,17 +89,27 @@ export function ManageProjects({
         </label>
         {errors.goalAmountCents && <span role="alert">{errors.goalAmountCents.message}</span>}
 
-        <button type="submit">Crear proyecto</button>
+        <button className="button button-coral" type="submit">
+          Crear proyecto ↗
+        </button>
       </form>
 
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
 
       {created && (
-        <div>
+        <div className="result-card">
           <p>
             Proyecto creado: {created.title} ({created.status})
           </p>
-          {created.status === "BORRADOR" && <button onClick={onPublish}>Publicar</button>}
+          {created.status === "BORRADOR" && (
+            <button className="button button-dark" onClick={onPublish}>
+              Publicar ↗
+            </button>
+          )}
         </div>
       )}
     </div>

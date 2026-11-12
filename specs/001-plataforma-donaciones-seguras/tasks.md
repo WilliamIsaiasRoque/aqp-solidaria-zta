@@ -322,3 +322,36 @@ MVP completo (Phases 1–5, 7, y el endurecimiento de Phase 6); no desplazan ni 
   entregables verificables que ese mismo documento define para ese día.
 - No se añadió ninguna tarea que implemente un control de seguridad simplificado o distinto al descrito
   en plan.md/data-model.md/contracts/api.md.
+
+---
+
+## Phase 8: Convergencia del frente frontend — SPA y publicación [MVP]
+
+Este bloque completa la integración que quedó implícita entre las Fases 2–5 y debe ejecutarse **antes**
+de la demo y el cierre de la Fase 7. No añade un octavo día al plan de design.md §9 ni sustituye las
+tareas T020–T022, T033–T035, T047–T048 y T055: esas tareas entregaron configuración y componentes
+aislados, pero aún no existe una SPA compilable y publicada. Responsable del frente: Jose; William
+colabora en los cambios de SAM y el despliegue. Los controles de autorización siguen en el backend.
+
+**Prueba independiente:** en `localhost:5173` y en el dominio CloudFront se puede abrir el catálogo,
+navegar a un detalle, iniciar y cerrar sesión con Cognito mediante Authorization Code + PKCE, y usar
+las pantallas permitidas por el rol; el navegador llama a la API sin errores de CORS ni CSP. Las
+operaciones protegidas siguen devolviendo 401/403 al invocarse directamente sin permiso.
+
+- [x] T078 Configurar Vite, Tailwind y el enrutador compatibles con el lockfile en `package.json`, `package-lock.json` y `vite.config.ts`; sustituir el `build` provisional por una compilación que produzca archivos estáticos para S3. **[MVP]** — design.md §2; RNF-HU-08 (CA-NF08.1).
+- [x] T079 Crear `frontend/index.html`, `frontend/src/main.tsx`, `frontend/src/App.tsx` y `frontend/src/styles.css` con raíz React, `QueryClientProvider`, navegación y mensaje visible de prototipo académico; mantener el frontend sin secretos ni credenciales AWS. **[MVP]** — design.md §3; RNF-HU-10 (CA-NF10.2).
+- [x] T080 [HU-01][HU-02] Conectar en `frontend/src/App.tsx` el catálogo, el detalle `/proyectos/:projectId`, estados de carga/error y navegación por teclado, reutilizando `frontend/src/pages/Catalog.tsx` y `ProjectDetail.tsx`. **[MVP]** — CA-01.1–01.3, CA-02.1–02.2, CA-NF06.2.
+- [x] T081 [HU-03] Integrar `frontend/src/auth/oidc.ts` y `session.ts` mediante un proveedor de sesión y una ruta de callback en `frontend/src/auth/AuthProvider.tsx` y `frontend/src/pages/AuthCallback.tsx`: login Code + PKCE, access token en memoria, restauración controlada y logout con revocación de refresh token; probar también recarga y error de callback. **[MVP]** — CA-03.1, CA-03.3, CA-NF11.1.
+- [x] T082 [HU-05][HU-06][HU-07][HU-08] Conectar en `frontend/src/App.tsx` las rutas de gestión, formulario de donación e historial (`ManageProjects.tsx`, `DonationForm.tsx`, `MyDonations.tsx`), pasando access token y grupos del token; usar las guardias de interfaz solo para experiencia de usuario y conservar el aviso de simulación sin cobro. **[MVP]** — CA-04.3, CA-05.1, CA-06.4, CA-07.1, CA-08.1–08.2.
+- [x] T083 [P] [HU-05] Parametrizar la URL de API en `frontend/src/services/api.ts` para local y CloudFront; conservar una `Idempotency-Key` por intento lógico al reintentar y validar exactamente dos decimales antes de convertir PEN a `amountCents` en `frontend/src/pages/DonationForm.tsx`. **[MVP]** — CA-05.1–05.4; design.md §4.
+- [x] T084 [P] [HU-03] Añadir las URL HTTPS de callback y logout de CloudFront, conservando las de `localhost:5173`, al `UserPoolClient` en `infra/template.yaml`; documentar el client ID, dominio y scopes como configuración pública de la SPA en `README.md`. **[MVP]** — CA-03.1, CA-03.3.
+- [ ] T085 Configurar en `infra/template.yaml` CORS del HTTP API para los orígenes local y CloudFront, métodos y cabeceras necesarios (`Authorization`, `Content-Type`, `Idempotency-Key`), y permitir el origen exacto de API Gateway en `connect-src` de la CSP; validar preflight y cabeceras después del despliegue. **[MVP]** — CA-NF01.1, CA-NF11.2; depende de T084 por editar el mismo archivo.
+- [x] T086 [HU-01][HU-02][HU-03][HU-05][HU-07][HU-08] Añadir en `frontend/test/` pruebas significativas de rutas, callback/login/logout, estados vacíos, errores y guardias por rol; verificar que las llamadas directas al API siguen siendo la fuente de autorización. **[MVP]** — CA-03.1–03.3, CA-04.1–04.3, CA-NF08.1.
+- [x] T087 Ejecutar `npm ci`, `npm test`, `npm run typecheck`, `npm run lint` y el nuevo `npm run build`; abrir la SPA local en `localhost:5173` y comprobar catálogo, navegación y diseño a 375 px, registrando resultados en `evidence/`. **[MVP]** — CA-NF06.1–06.2, CA-NF08.1.
+- [ ] T088 Publicar únicamente los archivos compilados de la SPA en el `SiteBucket` del stack `academic`, invalidar CloudFront y comprobar que `/` y una ruta profunda devuelven la aplicación por HTTPS; documentar los comandos reproducibles y el rollback en `README.md`. **[MVP]** — CA-NF01.1, CA-NF08.2; depende de T084–T087 y de acceso AWS autorizado.
+- [ ] T089 [HU-03][HU-05][HU-07][HU-08] Ejecutar en el sitio publicado el login PKCE, una operación por rol y pruebas negativas 401/403, además de CORS/CSP y logout; guardar capturas y respuestas sin tokens en `evidence/`, actualizar `AI_USAGE.md` y entregar el frente mediante PR revisado por otra persona. **[MVP]** — T01–T03, T05, T09, T11–T12; CA-NF07.2, CA-NF08.1.
+
+**Orden:** T078 → T079 → T080/T081 → T082; T083 puede avanzar en paralelo con T080/T081 y T084
+con la SPA local. T084 → T085; T082/T083/T085 → T086/T087 → T088 → T089. La publicación y las
+pruebas autenticadas dependen de credenciales y usuarios de prueba del equipo; no se marcan como
+completadas por tener código o infraestructura declarada.

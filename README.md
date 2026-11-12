@@ -6,24 +6,21 @@ reales.** Fuente de verdad funcional y técnica: [requirements.md](./requirement
 [design.md](./design.md). Especificación, plan y tareas de este primer feature:
 [specs/001-plataforma-donaciones-seguras/](./specs/001-plataforma-donaciones-seguras/).
 
-> **Estado actual**: Fases 1 a 3 (Setup; Foundational: Cognito, API Gateway, DynamoDB, authz;
-> catálogo y gestión de proyectos HU-01/HU-02/HU-08/HU-09) completadas y **desplegadas en AWS**
-> (stage `academic`, región `us-east-2`) — ver
-> [Recursos desplegados](#recursos-desplegados-stage-academic). Fase 4 (HU-05, HU-07: donaciones e
-> idempotencia) implementada en código e infraestructura (`infra/template.yaml` ampliado con 3
-> funciones Lambda nuevas y la ruta `GET /v1/donations/{donationId}`, agregada como corrección de
-> una omisión del contrato original — ver `specs/.../contracts/api.md`), **pendiente de
-> `sam deploy`**. Las fases 5–7 (simulación, endurecimiento y cierre) están pendientes.
+> **Estado actual (12 nov 2026)**: infraestructura base y catálogo/API públicos desplegados en
+> `academic` (`us-east-2`). La SPA, las donaciones y la simulación funcionan en código local, con
+> pruebas automatizadas; sus cambios recientes de infraestructura y la SPA estática aún no se han
+> publicado. CloudFront responde 403 al pedir `/` y el preflight CORS del API responde 404. El
+> despliegue y las pruebas autenticadas por rol quedan pendientes de una sesión AWS del equipo.
 
 ## Estructura del repositorio
 
 Reproduce exacta la estructura de [design.md §8](./design.md):
 
 ```text
-frontend/src/{pages,components,auth,services}/   # SPA React + Vite + Tailwind (pendiente, Fase 2+)
-backend/src/{projects,donations,authz,audit,shared}/  # API Node.js en Lambda (pendiente, Fase 2+)
+frontend/src/{pages,components,auth,services}/   # SPA React + Vite + Tailwind
+backend/src/{projects,donations,authz,audit,shared}/  # API Node.js en Lambda
 backend/test/
-infra/                                           # AWS SAM — template.yaml (pendiente, Fase 2)
+infra/                                           # AWS SAM — template.yaml
 policies/                                        # Cedar — extensión HU-12
 docs/                                            # api.yaml (OpenAPI), threat-model.md
 evidence/                                        # capturas sanitizadas, reportes de pruebas T01–T14
@@ -42,8 +39,9 @@ evidence/                                        # capturas sanitizadas, reporte
 npm install     # instala dependencias de desarrollo (lint, typecheck, test, build)
 npm run lint    # ESLint sobre todo el repositorio
 npm run typecheck   # tsc --noEmit
-npm test        # Vitest (suite actual: smoke test de estructura, T001)
-npm run build   # placeholder hasta que exista código de aplicación (Fase 2+)
+npm test        # Vitest (backend, frontend y smoke test)
+npm run build   # genera dist/frontend para S3
+npm run dev     # SPA local en http://127.0.0.1:5173
 ```
 
 El pipeline de CI (`.github/workflows/ci.yml`) ejecuta exactamente estos cuatro pasos (`npm ci`, lint,
@@ -104,6 +102,62 @@ Estos valores no son secretos (son identificadores de cliente público con PKCE,
 son específicos de esta cuenta — el equipo los reutiliza en la configuración de frontend/backend en las
 fases siguientes en vez de volver a buscarlos. `samconfig.toml` queda en CloudShell para repetir
 `sam deploy` sin las preguntas guiadas.
+
+## SPA: ejecución y publicación (T078–T089)
+
+La SPA usa React, Vite, Tailwind y React Router. El login usa Cognito Authorization Code + PKCE;
+`oidc-client-ts` guarda el usuario y sus tokens en memoria. Una recarga completa pierde la sesión local
+y requiere ingresar de nuevo. Las guardias de la interfaz solo ordenan la experiencia: API Gateway y
+las funciones Lambda vuelven a verificar el JWT, el grupo y la propiedad de cada recurso.
+Los scopes solicitados son `openid email profile api/projects.write api/donations.write
+api/donations.read`. El plan menciona React Router 8.x; el lockfile usa 7.x, la versión estable
+disponible al integrar este bloque.
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run dev
+```
+
+El desarrollo local usa un proxy Vite `/api` hacia el stage `academic` para consultar el catálogo sin
+alterar CORS de producción. El bundle de producción consulta el API público. Los siguientes valores
+son identificadores públicos, no secretos; se pueden sobrescribir antes de `npm run build` mediante
+un `frontend/.env.local` no versionado:
+
+| Variable | Valor de este laboratorio |
+|---|---|
+| `VITE_API_BASE_URL` | `https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com/academic` |
+| `VITE_COGNITO_USER_POOL_ID` | `us-east-2_caprohzIP` |
+| `VITE_COGNITO_CLIENT_ID` | `46biqan84afjjvg3gkqnbaf91` |
+| `VITE_COGNITO_DOMAIN` | `https://aqp-solidaria-zta-2026.auth.us-east-2.amazoncognito.com` |
+
+Para publicar desde AWS CloudShell con la sesión IAM temporal del equipo, ejecutar
+`bash scripts/publish-spa.sh` desde la raíz del repositorio. El script valida el código, compila,
+actualiza el stack SAM (callback/logout HTTPS, CORS y CSP), obtiene el nombre del bucket y el ID
+de la distribución desde las salidas de CloudFormation, sincroniza solo `dist/frontend/assets`,
+sube `index.html` sin caché e invalida CloudFront. Acepta el nombre del stack como primer argumento
+y las variables `AWS_REGION`, `COGNITO_DOMAIN_PREFIX` y `SPA_ORIGIN` si se despliega otra instancia.
+Se requiere Node compatible con Vite 8, AWS CLI, SAM CLI y permisos IAM para CloudFormation, S3 y
+CloudFront. La publicación no solicita ni almacena credenciales AWS en el repositorio.
+
+Verificar después de publicar:
+
+```bash
+curl -I https://d3if5n1ucewbp.cloudfront.net/
+curl -I https://d3if5n1ucewbp.cloudfront.net/proyectos
+curl -i -X OPTIONS 'https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com/academic/v1/projects' \
+  -H 'Origin: https://d3if5n1ucewbp.cloudfront.net' \
+  -H 'Access-Control-Request-Method: GET'
+```
+
+Las rutas profundas vuelven a `index.html` por la configuración de errores 403/404 de CloudFront.
+Para revertir la SPA, reconstruir el commit anterior, volver a sincronizar sus archivos con el mismo
+script y crear una nueva invalidación. Si el cambio problemático es de SAM, revertir el commit de
+infraestructura y ejecutar `sam build`/`sam deploy` antes de republicar. No usar `sam delete` como
+rollback: destruiría los recursos del laboratorio.
 
 ## Flujo de trabajo y control de cambios (T005)
 
