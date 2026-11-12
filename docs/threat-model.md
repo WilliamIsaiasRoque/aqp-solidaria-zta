@@ -49,12 +49,27 @@ T065 — Fase 6, tras tener los endpoints y pruebas implementados.)_
 - HTTP API no se integra con AWS WAF.
 - Cuenta compartida por el equipo: el aislamiento entre integrantes depende de IAM y de la disciplina del
   equipo.
-- **MFA por grupo (T012, CA-11.1)**: CloudFormation/Cognito no permiten exigir MFA solo a grupos
-  específicos (`GESTOR`, `AUDITOR`) a nivel de User Pool; `MfaConfiguration` se aplica por pool, no por
-  grupo. `infra/template.yaml` habilita `SOFTWARE_TOKEN_MFA` como mecanismo disponible
-  (`MfaConfiguration: OPTIONAL`); la exigencia efectiva para `GESTOR`/`AUDITOR` se activa de forma
-  individual al crear cada usuario de esos grupos y se evidencia operativamente en la Fase 5 (T057:
-  verificación de que un `GESTOR` sin segundo factor no completa el inicio de sesión).
+- **MFA por grupo (T012/T057, CA-11.1/CA-11.2) — RESUELTO en la Fase 5**: `MfaConfiguration` de
+  Cognito es por pool, no por grupo, así que no existe una propiedad declarativa para exigir MFA
+  solo a `GESTOR`/`AUDITOR`. Se resolvió con un Lambda trigger `PreAuthentication`
+  (`MfaEnforcementFunction`, `backend/src/authz/mfaEnforcement.ts`): Cognito lo invoca en cada
+  intento de login, antes de validar la contraseña; el trigger consulta
+  `AdminListGroupsForUser` y, si el usuario pertenece a `GESTOR` o `AUDITOR`, consulta
+  `AdminGetUser` (`UserMFASettingList`) y lanza un `Error` si `SOFTWARE_TOKEN_MFA` no está
+  configurado. Cualquier error lanzado por un trigger de Cognito aborta el flujo de autenticación
+  completo: el llamante no recibe tokens (T14/T051), sin necesidad de enrolar MFA manualmente a
+  cada usuario nuevo de esos grupos. Prueba (rojo→verde):
+  `backend/test/integration/mfaEnforcement.test.ts`.
+  **Excepción de mínimo privilegio justificada (RNF-HU-03, CA-NF03.2)**: la política IAM de
+  `MfaEnforcementFunction` usa `Resource: "arn:aws:cognito-idp:<region>:<cuenta>:userpool/*"` en
+  vez de la ARN exacta del User Pool, porque referenciarlo directamente (`!GetAtt UserPool.Arn`)
+  crearía una dependencia circular con `UserPool.LambdaConfig.PreAuthentication` (que a su vez
+  referencia esta función) — es el patrón estándar documentado por AWS para este caso. El
+  wildcard solo cubre el segmento del ID del pool (no la cuenta ni la región); en esta cuenta
+  dedicada solo existe un User Pool, por lo que el alcance real equivale a una ARN exacta.
+  **Pendiente**: verificar contra un login real desplegado (crear un usuario GESTOR de prueba sin
+  MFA y confirmar que Cognito rechaza el `InitiateAuth`); requiere credenciales de AWS que este
+  agente no tiene en esta sesión — ver `evidence/t051-mfa-gestor/README.md`.
 - **Verificación de T02/T11 en la Fase 2**: `backend/test/integration/auth.test.ts` prueba localmente
   que el Lambda `authCheck` rechaza (401) un contexto de autorización ausente o un ID token usado como
   credencial, como defensa adicional (Principio constitucional II — Backend autoritativo). Además, tras
