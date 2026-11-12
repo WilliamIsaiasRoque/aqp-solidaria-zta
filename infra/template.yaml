@@ -12,9 +12,11 @@ Parameters:
     Default: academic
     AllowedValues:
       - academic
+      - preview
     Description: >
-      Stage académico (requirements.md CA-06.1): el endpoint de simulación de confirmación de
-      donaciones (Fase 5) solo se despliega cuando StageName = academic.
+      El endpoint de simulación de confirmación de donaciones (CA-06.1) solo se despliega en
+      academic. El valor preview permite validar la rama sin simulación; el laboratorio se
+      despliega con academic.
   CognitoDomainPrefix:
     Type: String
     Description: >
