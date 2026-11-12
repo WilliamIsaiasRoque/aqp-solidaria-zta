@@ -34,6 +34,9 @@ export function MyDonations({ accessToken }: { accessToken: string }) {
           <p>Proyecto: {donation.projectId}</p>
           <p>Importe: S/ {(donation.amountCents / 100).toFixed(2)}</p>
           <p>Estado: {donation.status}</p>
+          {donation.status !== "PENDIENTE_SIMULACION" && (
+            <p>«Simulación académica: no se ha realizado ningún cobro».</p>
+          )}
         </li>
       ))}
     </ul>

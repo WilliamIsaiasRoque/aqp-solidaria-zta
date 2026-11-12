@@ -154,21 +154,23 @@ sin el segundo factor.
 
 ### Tests para esta fase
 
-- [ ] T049 [P] [HU-06] Escribir y ejecutar **T08** (10 confirmaciones concurrentes de la misma donación → un solo incremento) en `backend/test/integration/simulate.test.ts`. **[MVP]** — CA-06.2; RNF-HU-04 (CA-NF04.1)
-- [ ] T050 [P] [HU-03] Escribir y ejecutar **T13** (token revocado usado antes de expirar → aceptado hasta expirar, limitación documentada; rechazado después) en `backend/test/integration/auth.test.ts`. **[MVP]** — CA-03.4
-- [ ] T051 [P] [HU-11] Escribir y ejecutar **T14** (usuario GESTOR inicia sesión sin segundo factor → no obtiene tokens) con evidencia (captura o prueba) en `evidence/`. **[MVP]** — CA-11.2
+- [X] T049 [P] [HU-06] Escribir y ejecutar **T08** (10 confirmaciones concurrentes de la misma donación → un solo incremento) en `backend/test/integration/simulate.test.ts`. **[MVP]** — CA-06.2; RNF-HU-04 (CA-NF04.1) — *escrito y verificado durante T052-T054: 1 éxito, 9 conflictos 409, un solo incremento (rojo→verde)*
+- [X] T050 [P] [HU-03] Escribir y ejecutar **T13** (token revocado usado antes de expirar → aceptado hasta expirar, limitación documentada; rechazado después) en `backend/test/integration/auth.test.ts`. **[MVP]** — CA-03.4 — *se agregó validación de `exp` a `authz/context.ts` como defensa adicional (Principio II); rojo→verde; ver nota ampliada en `docs/threat-model.md` (T056)*
+- [ ] T051 [P] [HU-11] Escribir y ejecutar **T14** (usuario GESTOR inicia sesión sin segundo factor → no obtiene tokens) con evidencia (captura o prueba) en `evidence/`. **[MVP]** — CA-11.2 — **BLOQUEADO, no completado**: requiere un login real contra Cognito (crear usuario de prueba, enrolar/no enrolar MFA, ejecutar el flujo) y este agente no tiene credenciales de AWS en esta sesión (`aws sts get-caller-identity` → `NoCredentials`, igual que T057). Detalle y cómo completarlo en `evidence/t051-mfa-gestor/README.md`.
 
 ### Implementación
 
 - [X] T052 [HU-06] En `infra/template.yaml`, condicionar el despliegue de la ruta `POST /v1/donations/{donationId}/simulate` exclusivamente al stage `academic` (la ruta no debe existir en otro stage). **[MVP]** — CA-06.1 — *`Condition: IsAcademicStage` en `SimulateDonationFunction` y su LogGroup; `sam validate --lint` y `sam build` en verde*
 - [X] T053 [HU-06] Implementar `POST /v1/donations/{donationId}/simulate` en `backend/src/donations/simulateDonation.ts`: exige propiedad (`donorSub` = `sub` autenticado), transición solo desde `PENDIENTE_SIMULACION`. **[MVP]** — CA-06.1 — *403 si no es propietario, 404 si no existe, 409 si ya no está `PENDIENTE_SIMULACION`*
 - [X] T054 [HU-06] Implementar en `backend/src/donations/simulateDonation.ts` la transacción atómica (`TransactWriteItems` condicionado a `status = PENDIENTE_SIMULACION` y `donorSub = :sub`) que actualiza la donación e incrementa `confirmedAmountCents` del proyecto solo en la primera transición válida; transición inválida devuelve 409; `RECHAZADA_SIMULADA` no incrementa el agregado. **[MVP]** — CA-06.2, CA-06.3; RNF-HU-04 (CA-NF04.1, CA-NF04.2) — *test T08 en `backend/test/integration/simulate.test.ts` (10 solicitudes paralelas, rojo→verde): 1 éxito, 9 conflictos 409, un solo incremento; verificado localmente, no contra el stage real (no desplegado todavía)*
-- [ ] T055 [P] [HU-06] Mostrar en `frontend/src/pages/DonationForm.tsx` y `frontend/src/pages/MyDonations.tsx` el aviso «Simulación académica: no se ha realizado ningún cobro» tras cualquier resultado de simulación. **[MVP]** — CA-06.4
-- [ ] T056 [HU-03] Registrar en `backend/test/integration/auth.test.ts` la evidencia de la limitación de revocación del JWT authorizer (CA-03.4) en `docs/threat-model.md`, sección "Limitaciones conocidas". **[MVP]** — CA-03.4
-- [ ] T057 [HU-11] Verificar en consola de Cognito (o prueba automatizada) que un usuario `GESTOR` sin MFA configurado no completa el inicio de sesión; documentar evidencia en `evidence/`. **[MVP]** — CA-11.2
-- [ ] T058 [P] Verificar que CloudFront entrega CSP, HSTS, `X-Content-Type-Options` y `Referrer-Policy` (configurados en T022) sobre el stage desplegado; documentar en `evidence/`. **[MVP]** — RNF-HU-11 (CA-NF11.2)
+- [X] T055 [P] [HU-06] Mostrar en `frontend/src/pages/DonationForm.tsx` y `frontend/src/pages/MyDonations.tsx` el aviso «Simulación académica: no se ha realizado ningún cobro» tras cualquier resultado de simulación. **[MVP]** — CA-06.4 — *botones "Simular confirmación"/"Simular rechazo" en `DonationForm.tsx` llamando a `services/api.ts::simulateDonation`; aviso en `MyDonations.tsx` para todo estado distinto de `PENDIENTE_SIMULACION`; tests rojo→verde en `frontend/test/pages/donations-pages.test.tsx`*
+- [X] T056 [HU-03] Registrar en `backend/test/integration/auth.test.ts` la evidencia de la limitación de revocación del JWT authorizer (CA-03.4) en `docs/threat-model.md`, sección "Limitaciones conocidas". **[MVP]** — CA-03.4
+- [ ] T057 [HU-11] Verificar en consola de Cognito (o prueba automatizada) que un usuario `GESTOR` sin MFA configurado no completa el inicio de sesión; documentar evidencia en `evidence/`. **[MVP]** — CA-11.2 — *excluida de este bloque por decisión del usuario (requiere un diseño de Lambda trigger más elaborado)*
+- [X] T058 [P] Verificar que CloudFront entrega CSP, HSTS, `X-Content-Type-Options` y `Referrer-Policy` (configurados en T022) sobre el stage desplegado; documentar en `evidence/`. **[MVP]** — RNF-HU-11 (CA-NF11.2) — *verificado contra `https://d3if5n1ucewbp.cloudfront.net/` real (403 de origen, pero las 4 cabeceras ya presentes); evidencia en `evidence/t058-cloudfront-headers/`*
 
-**Checkpoint**: HU-06 y HU-11 funcionales; T08, T13, T14 con evidencia; CloudFront + CSP verificados
+**Checkpoint**: HU-06 funcional (T052-T055); T08 y T13 con evidencia; CloudFront + CSP verificados
+contra el stage real (T058). **Pendiente**: HU-11 — T051/T14 bloqueado por falta de credenciales
+AWS en esta sesión (ver `evidence/t051-mfa-gestor/`); T057 excluido por decisión de equipo
 (design.md §9, día 5).
 
 ---
