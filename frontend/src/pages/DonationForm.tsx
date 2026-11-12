@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { amountCentsSchema } from "../../../backend/src/shared/schemas.js";
-import { createDonation, type DonationSummary } from "../services/api.js";
+import { createDonation, simulateDonation, type DonationSummary } from "../services/api.js";
 
 interface FormFields {
   amountPen: string;
@@ -39,6 +39,17 @@ export function DonationForm({ accessToken, projectId }: { accessToken: string; 
     }
   };
 
+  const onSimulate = async (outcome: "CONFIRMADA_SIMULADA" | "RECHAZADA_SIMULADA") => {
+    if (!created) return;
+    setError(null);
+    try {
+      const updated = await simulateDonation(accessToken, created.donationId, outcome);
+      setCreated(updated);
+    } catch {
+      setError("No se pudo simular la confirmación.");
+    }
+  };
+
   return (
     <div>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -57,10 +68,20 @@ export function DonationForm({ accessToken, projectId }: { accessToken: string; 
       {error && <p role="alert">{error}</p>}
 
       {created && (
-        <p>
-          Donación registrada: {created.status} — «Simulación académica: no se ha realizado ningún
-          cobro».
-        </p>
+        <div>
+          <p>Donación registrada: {created.status}</p>
+          <p>«Simulación académica: no se ha realizado ningún cobro».</p>
+          {created.status === "PENDIENTE_SIMULACION" && (
+            <>
+              <button type="button" onClick={() => onSimulate("CONFIRMADA_SIMULADA")}>
+                Simular confirmación
+              </button>
+              <button type="button" onClick={() => onSimulate("RECHAZADA_SIMULADA")}>
+                Simular rechazo
+              </button>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

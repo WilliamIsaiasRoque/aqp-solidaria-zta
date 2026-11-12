@@ -1,0 +1,15 @@
+HTTP/2 403 
+content-type: application/xml
+date: Thu, 12 Nov 2026 12:48:04 GMT
+server: AmazonS3
+x-cache: Error from cloudfront
+via: 1.1 8e474c795a53d6737eb97f2aa45be964.cloudfront.net (CloudFront)
+x-amz-cf-pop: MIA3-P2
+x-amz-cf-id: ji86yeJKGYjQNWyX8Z-WHAmuiejprQf9VdgLLgmKMCbGIWdyRGarjw==
+referrer-policy: same-origin
+content-security-policy: default-src 'self'; connect-src 'self' https://cognito-idp.us-east-2.amazonaws.com https://*.amazoncognito.com; img-src 'self' data:; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
+x-content-type-options: nosniff
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+
+<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>

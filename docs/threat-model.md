@@ -30,6 +30,20 @@ T065 — Fase 6, tras tener los endpoints y pruebas implementados.)_
 
 - El JWT authorizer valida tokens localmente: un access token revocado sigue siendo válido hasta su
   expiración (CA-03.4). Mitigación: vida corta del access token (≤ 15 min).
+- **Evidencia T13 (Fase 5, T056)**: `backend/test/integration/auth.test.ts`, describe "T13 — límite
+  de revocación: aceptado hasta expirar, rechazado después (CA-03.4)", demuestra en código esta
+  limitación: (a) un token con claims válidos y `exp` vigente se acepta sin excepción, aunque
+  hipotéticamente estuviera revocado — no existe ningún claim de "revocado" que `getAuthContext`
+  (`backend/src/authz/context.ts`) pueda inspeccionar, por lo que la única mitigación real es la
+  vida corta del access token (≤ 15 min, CA-03.3); (b) como defensa adicional (Principio
+  constitucional II — Backend autoritativo), `getAuthContext` SÍ valida el claim `exp` cuando está
+  presente y rechaza con 401 un token ya expirado, sin depender únicamente de que lo haga el JWT
+  authorizer de API Gateway. La verificación de que un token *realmente revocado* vía
+  `/oauth2/revoke` (CA-03.3) sigue siendo aceptado hasta su expiración natural, contra el stage
+  real desplegado, requiere ejecutar un flujo de login + logout + reintento con un usuario de
+  prueba — no realizado en este Lambda-level test; queda para una verificación manual con
+  evidencia (captura) cuando exista login de prueba end-to-end (Fase 3+ / quickstart.md
+  Escenario 6).
 - Sin postura de dispositivo ni evaluación continua de riesgo (AWS Verified Access y Cognito Plus no
   disponibles sin costo en el AWS Free plan).
 - HTTP API no se integra con AWS WAF.

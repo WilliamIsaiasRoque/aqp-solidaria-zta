@@ -57,6 +57,39 @@ describe("DonationForm — HU-05", () => {
 
     expect(screen.queryByLabelText(/tarjeta|cvv|cuenta bancaria|dni/i)).toBeNull();
   });
+
+  it("muestra el aviso académico tras simular la confirmación (CA-06.4, T055)", async () => {
+    vi.spyOn(api, "createDonation").mockResolvedValue({
+      donationId: "d-1",
+      projectId: "p-1",
+      donorSub: "donor-1",
+      amountCents: 1000,
+      currency: "PEN",
+      status: "PENDIENTE_SIMULACION",
+      createdAt: new Date().toISOString(),
+    });
+    const simulateSpy = vi.spyOn(api, "simulateDonation").mockResolvedValue({
+      donationId: "d-1",
+      projectId: "p-1",
+      donorSub: "donor-1",
+      amountCents: 1000,
+      currency: "PEN",
+      status: "CONFIRMADA_SIMULADA",
+      createdAt: new Date().toISOString(),
+    });
+
+    renderWithQuery(<DonationForm accessToken="token" projectId="p-1" />);
+
+    fireEvent.change(screen.getByLabelText(/monto/i), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: /donar/i }));
+    await screen.findByText(/pendiente_simulacion/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /simular confirmaci[oó]n/i }));
+
+    expect(await screen.findByText(/confirmada_simulada/i)).toBeTruthy();
+    expect(screen.getByText(/simulaci[oó]n acad[eé]mica: no se ha realizado ning[uú]n cobro/i)).toBeTruthy();
+    expect(simulateSpy).toHaveBeenCalledWith("token", "d-1", "CONFIRMADA_SIMULADA");
+  });
 });
 
 describe("MyDonations — HU-07", () => {
@@ -86,5 +119,35 @@ describe("MyDonations — HU-07", () => {
     renderWithQuery(<MyDonations accessToken="token" />);
 
     expect(await screen.findByTestId("empty-donations")).toBeTruthy();
+  });
+
+  it("muestra el aviso académico junto a una donación ya simulada (CA-06.4, T055)", async () => {
+    vi.spyOn(api, "fetchMyDonations").mockResolvedValue([
+      {
+        donationId: "d-confirmada",
+        projectId: "p-1",
+        donorSub: "donor-1",
+        amountCents: 1000,
+        currency: "PEN",
+        status: "CONFIRMADA_SIMULADA",
+        createdAt: "2026-11-09T00:00:00.000Z",
+      },
+      {
+        donationId: "d-pendiente",
+        projectId: "p-1",
+        donorSub: "donor-1",
+        amountCents: 2000,
+        currency: "PEN",
+        status: "PENDIENTE_SIMULACION",
+        createdAt: "2026-11-09T00:00:00.000Z",
+      },
+    ]);
+
+    renderWithQuery(<MyDonations accessToken="token" />);
+
+    await screen.findByText(/CONFIRMADA_SIMULADA/);
+    expect(
+      screen.getAllByText(/simulaci[oó]n acad[eé]mica: no se ha realizado ning[uú]n cobro/i),
+    ).toHaveLength(1);
   });
 });

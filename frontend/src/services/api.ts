@@ -124,3 +124,24 @@ export async function fetchMyDonations(accessToken: string): Promise<DonationSum
   const data = (await response.json()) as { items: DonationSummary[] };
   return data.items;
 }
+
+/**
+ * POST /v1/donations/{donationId}/simulate (HU-06, CA-06.1) — solo DONANTE propietario; solo
+ * existe en el stage `academic` (CA-06.1, infra/template.yaml). La UI muestra siempre el aviso
+ * «Simulación académica: no se ha realizado ningún cobro» tras el resultado (CA-06.4).
+ */
+export async function simulateDonation(
+  accessToken: string,
+  donationId: string,
+  outcome: "CONFIRMADA_SIMULADA" | "RECHAZADA_SIMULADA",
+): Promise<DonationSummary> {
+  const response = await fetch(`${API_BASE_URL}/v1/donations/${donationId}/simulate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ outcome }),
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo simular la donación (HTTP ${response.status}).`);
+  }
+  return (await response.json()) as DonationSummary;
+}

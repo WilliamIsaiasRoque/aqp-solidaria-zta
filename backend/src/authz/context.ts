@@ -54,6 +54,20 @@ export function getAuthContext(event: APIGatewayProxyEventV2WithJWTAuthorizer): 
     );
   }
 
+  // `exp` es opcional aquí solo por compatibilidad con fixtures de prueba de fases anteriores que
+  // no lo incluían; un access token real de Cognito siempre lo trae. Cuando está presente, se
+  // valida como defensa adicional (Principio II) — el JWT authorizer de API Gateway ya lo exige
+  // igualmente antes de invocar este Lambda.
+  if (claims.exp !== undefined) {
+    const exp = typeof claims.exp === "number" ? claims.exp : Number(claims.exp);
+    if (!Number.isFinite(exp) || exp <= Math.floor(Date.now() / 1000)) {
+      throw new UnauthorizedError(
+        "El token verificado ya expiró (CA-03.4). La revocación en sí no es un claim " +
+          "verificable localmente — ver limitación documentada en docs/threat-model.md.",
+      );
+    }
+  }
+
   const sub = typeof claims.sub === "string" ? claims.sub : undefined;
   if (!sub) {
     throw new UnauthorizedError("El claim 'sub' no está presente en el token verificado.");
