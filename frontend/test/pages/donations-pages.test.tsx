@@ -19,17 +19,15 @@ afterEach(() => {
 
 describe("DonationForm — HU-05", () => {
   it("registra la donación con un amountCents válido y muestra la confirmación (CA-05.1)", async () => {
-    const createSpy = vi
-      .spyOn(api, "createDonation")
-      .mockResolvedValue({
-        donationId: "d-1",
-        projectId: "p-1",
-        donorSub: "donor-1",
-        amountCents: 1000,
-        currency: "PEN",
-        status: "PENDIENTE_SIMULACION",
-        createdAt: new Date().toISOString(),
-      });
+    const createSpy = vi.spyOn(api, "createDonation").mockResolvedValue({
+      donationId: "d-1",
+      projectId: "p-1",
+      donorSub: "donor-1",
+      amountCents: 1000,
+      currency: "PEN",
+      status: "PENDIENTE_SIMULACION",
+      createdAt: new Date().toISOString(),
+    });
 
     renderWithQuery(<DonationForm accessToken="token" projectId="p-1" />);
 
@@ -37,7 +35,11 @@ describe("DonationForm — HU-05", () => {
     fireEvent.click(screen.getByRole("button", { name: /donar/i }));
 
     expect(await screen.findByText(/pendiente_simulacion/i)).toBeTruthy();
-    expect(createSpy).toHaveBeenCalledWith("token", { projectId: "p-1", amountCents: 1000 });
+    expect(createSpy).toHaveBeenCalledWith(
+      "token",
+      { projectId: "p-1", amountCents: 1000 },
+      expect.any(String),
+    );
   });
 
   it("rechaza un monto inválido sin llamar a createDonation (CA-05.2)", async () => {
@@ -49,6 +51,15 @@ describe("DonationForm — HU-05", () => {
     fireEvent.click(screen.getByRole("button", { name: /donar/i }));
 
     expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("rechaza más de dos decimales en lugar de redondearlos", async () => {
+    const createSpy = vi.spyOn(api, "createDonation");
+    renderWithQuery(<DonationForm accessToken="token" projectId="p-1" />);
+    fireEvent.change(screen.getByLabelText(/monto/i), { target: { value: "10.999" } });
+    fireEvent.click(screen.getByRole("button", { name: /donar/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/máximo dos decimales/i);
     expect(createSpy).not.toHaveBeenCalled();
   });
 
@@ -87,7 +98,9 @@ describe("DonationForm — HU-05", () => {
     fireEvent.click(screen.getByRole("button", { name: /simular confirmaci[oó]n/i }));
 
     expect(await screen.findByText(/confirmada_simulada/i)).toBeTruthy();
-    expect(screen.getByText(/simulaci[oó]n acad[eé]mica: no se ha realizado ning[uú]n cobro/i)).toBeTruthy();
+    expect(
+      screen.getByText(/simulaci[oó]n acad[eé]mica: no se ha realizado ning[uú]n cobro/i),
+    ).toBeTruthy();
     expect(simulateSpy).toHaveBeenCalledWith("token", "d-1", "CONFIRMADA_SIMULADA");
   });
 });

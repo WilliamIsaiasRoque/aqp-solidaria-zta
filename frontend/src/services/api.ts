@@ -3,7 +3,12 @@
  * stage `academic`, región `us-east-2`) — se reutiliza el identificador existente, no se inventa
  * uno nuevo.
  */
-export const API_BASE_URL = "https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com/academic";
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV
+    ? "/api/academic"
+    : "https://6r66dyrf0h.execute-api.us-east-2.amazonaws.com/academic")
+).replace(/\/$/, "");
 
 export interface ProjectSummary {
   projectId: string;
@@ -92,18 +97,19 @@ export interface CreateDonationInput {
 
 /**
  * POST /v1/donations (CA-05.1, CA-05.5) — solo DONANTE. Exige `Idempotency-Key`; se genera un UUID
- * nuevo por envío (CA-05.4, requirements.md HU-05) con `crypto.randomUUID()`.
+ * por intención lógica. El formulario conserva la clave si se reintenta el mismo envío.
  */
 export async function createDonation(
   accessToken: string,
   input: CreateDonationInput,
+  idempotencyKey: string = crypto.randomUUID(),
 ): Promise<DonationSummary> {
   const response = await fetch(`${API_BASE_URL}/v1/donations`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
-      "Idempotency-Key": crypto.randomUUID(),
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify(input),
   });

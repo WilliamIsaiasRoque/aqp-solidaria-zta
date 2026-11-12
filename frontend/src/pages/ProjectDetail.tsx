@@ -13,25 +13,51 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   });
 
   if (isLoading) {
-    return <p>Cargando proyecto…</p>;
+    return (
+      <p className="loading-state" role="status">
+        Cargando proyecto…
+      </p>
+    );
   }
 
   if (isError) {
-    return <p role="alert">No se pudo cargar el proyecto. Intenta de nuevo más tarde.</p>;
+    return (
+      <p className="notice-card" role="alert">
+        No se pudo cargar el proyecto. Intenta de nuevo más tarde.
+      </p>
+    );
   }
 
   if (!data) {
-    return <p role="alert">Proyecto no encontrado.</p>;
+    return (
+      <p className="notice-card" role="alert">
+        Proyecto no encontrado.
+      </p>
+    );
   }
 
   return (
-    <article>
-      <h2>{data.title}</h2>
-      <p>Identificador: {data.projectId}</p>
-      <p>{data.description}</p>
-      <p>Estado: {data.status}</p>
-      <p>Meta: S/ {(data.goalAmountCents / 100).toFixed(2)}</p>
-      <p>Acumulado (simulado): S/ {(data.confirmedAmountCents / 100).toFixed(2)}</p>
+    <article className="detail-card">
+      <div className="detail-art" aria-hidden="true" />
+      <div className="detail-content">
+        <span className="section-kicker">PROYECTO PUBLICADO · {data.projectId}</span>
+        <h2>{data.title}</h2>
+        <p>{data.description}</p>
+        <div className="detail-figures">
+          <span>
+            Meta<strong>S/ {(data.goalAmountCents / 100).toFixed(2)}</strong>
+          </span>
+          <span>
+            Acumulado (simulado)<strong>S/ {(data.confirmedAmountCents / 100).toFixed(2)}</strong>
+          </span>
+        </div>
+        <a
+          className="button button-coral"
+          href={`/proyectos/${encodeURIComponent(data.projectId)}/donar`}
+        >
+          Simular una donación <span aria-hidden="true">↗</span>
+        </a>
+      </div>
     </article>
   );
 }
