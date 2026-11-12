@@ -21,6 +21,11 @@ Parameters:
       Prefijo único del dominio hosted UI de Cognito (p. ej. aqp-solidaria-academic-<sufijo>).
       Se fija por el equipo antes del primer despliegue para evitar colisiones globales.
 
+Conditions:
+  # CA-06.1: el endpoint de simulación de confirmación de donaciones SOLO existe cuando el stage
+  # es `academic`; en cualquier otro stage la ruta no se despliega (ver SimulateDonationFunction).
+  IsAcademicStage: !Equals [!Ref StageName, "academic"]
+
 Globals:
   Function:
     Runtime: nodejs24.x
@@ -620,6 +625,61 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/lambda/${GetDonationFunction}"
+      RetentionInDays: 14
+
+  # ---------------------------------------------------------------------------------------------
+  # Simulación de confirmación — Fase 5 (T052-T054) — [MVP] — HU-06
+  # CA-06.1: esta función y su ruta SOLO se despliegan cuando StageName = academic (Condición
+  # IsAcademicStage); en cualquier otro stage el recurso no existe. CA-06.2/CA-NF04.1/CA-NF04.2:
+  # la transición de la donación y el incremento de confirmedAmountCents del proyecto se escriben
+  # en una única transacción atómica (ver backend/src/donations/repository.ts, método `simulate`).
+  # ---------------------------------------------------------------------------------------------
+  SimulateDonationFunction:
+    Type: AWS::Serverless::Function
+    Condition: IsAcademicStage
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2022"
+        Sourcemap: false
+        EntryPoints:
+          - donations/simulateDonation.ts
+    Properties:
+      CodeUri: ../backend/src/
+      Handler: donations/simulateDonation.handler
+      Environment:
+        Variables:
+          DONATIONS_TABLE_NAME: !Ref DonationsTable
+          PROJECTS_TABLE_NAME: !Ref ProjectsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt DonationsTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt ProjectsTable.Arn
+      Events:
+        SimulateDonation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /v1/donations/{donationId}/simulate
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+              AuthorizationScopes:
+                - api/donations.write
+
+  SimulateDonationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: IsAcademicStage
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${SimulateDonationFunction}"
       RetentionInDays: 14
 
   # ---------------------------------------------------------------------------------------------

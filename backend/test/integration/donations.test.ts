@@ -90,6 +90,10 @@ function buildDonationsRepo(seed: DonationRecord[] = []) {
     async listByDonor(donorSub) {
       return [...donations.values()].filter((d) => d.donorSub === donorSub);
     },
+    async simulate() {
+      // No usado por los tests de esta fase (T04-T07, T09, T12); cubierto por simulate.test.ts.
+      throw new Error("no usado en este test");
+    },
   };
 
   return repo;
