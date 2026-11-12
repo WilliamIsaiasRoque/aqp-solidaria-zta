@@ -37,6 +37,18 @@ export type CreateDonationOutcome =
   | { outcome: "duplicate"; donation: DonationRecord }
   | { outcome: "conflict" };
 
+export interface SimulateDonationInput {
+  donationId: string;
+  donorSub: string;
+  projectId: string;
+  amountCents: number;
+  outcome: "CONFIRMADA_SIMULADA" | "RECHAZADA_SIMULADA";
+}
+
+export type SimulateDonationOutcome =
+  | { ok: true; donation: DonationRecord }
+  | { ok: false; reason: "ALREADY_RESOLVED" };
+
 export interface DonationsRepository {
   /**
    * Reserva de clave de idempotencia y creación de la donación en una única operación atómica
@@ -48,10 +60,20 @@ export interface DonationsRepository {
   getById(donationId: string): Promise<DonationRecord | undefined>;
   /** Solo donaciones del `donorSub` dado (CA-07.1), vía el GSI `donorSub-createdAt`. */
   listByDonor(donorSub: string): Promise<DonationRecord[]>;
+  /**
+   * Transición PENDIENTE_SIMULACION → estado terminal, e incremento de `confirmedAmountCents` del
+   * proyecto SOLO si `outcome` es `CONFIRMADA_SIMULADA` (CA-06.3), en una única operación atómica
+   * (`TransactWriteItems` condicionado a `status = PENDIENTE_SIMULACION` y `donorSub`, CA-06.2,
+   * RNF-HU-04 CA-NF04.1/CA-NF04.2). La propiedad (403) y la existencia (404) de la donación se
+   * verifican antes, en el handler, vía `getById`; este método solo resuelve la condición de
+   * carrera: una transición ya resuelta devuelve `{ ok: false, reason: "ALREADY_RESOLVED" }`.
+   */
+  simulate(input: SimulateDonationInput): Promise<SimulateDonationOutcome>;
 }
 
 const DONATIONS_TABLE = process.env.DONATIONS_TABLE_NAME ?? "";
 const IDEMPOTENCY_TABLE = process.env.IDEMPOTENCY_TABLE_NAME ?? "";
+const PROJECTS_TABLE = process.env.PROJECTS_TABLE_NAME ?? "";
 const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24 h, design.md §5
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -148,5 +170,57 @@ export const dynamoDbDonationsRepository: DonationsRepository = {
       }),
     );
     return (result.Items ?? []) as DonationRecord[];
+  },
+
+  async simulate(input) {
+    const now = new Date().toISOString();
+
+    try {
+      await client.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName: DONATIONS_TABLE,
+                Key: { donationId: input.donationId },
+                UpdateExpression: "SET #status = :outcome, updatedAt = :now",
+                ConditionExpression: "#status = :pending AND donorSub = :donorSub",
+                ExpressionAttributeNames: { "#status": "status" },
+                ExpressionAttributeValues: {
+                  ":outcome": input.outcome,
+                  ":pending": "PENDIENTE_SIMULACION",
+                  ":donorSub": input.donorSub,
+                  ":now": now,
+                },
+              },
+            },
+            ...(input.outcome === "CONFIRMADA_SIMULADA"
+              ? [
+                  {
+                    Update: {
+                      TableName: PROJECTS_TABLE,
+                      Key: { projectId: input.projectId },
+                      UpdateExpression: "ADD confirmedAmountCents :amount SET updatedAt = :now",
+                      ConditionExpression: "attribute_exists(projectId)",
+                      ExpressionAttributeValues: { ":amount": input.amountCents, ":now": now },
+                    },
+                  },
+                ]
+              : []),
+          ],
+        }),
+      );
+    } catch (error) {
+      if (error instanceof TransactionCanceledException) {
+        return { ok: false, reason: "ALREADY_RESOLVED" };
+      }
+      throw error;
+    }
+
+    const donation = await dynamoDbDonationsRepository.getById(input.donationId);
+    if (!donation) {
+      throw new Error("Inconsistencia: la donación desapareció tras una transacción exitosa.");
+    }
+    return { ok: true, donation };
   },
 };
