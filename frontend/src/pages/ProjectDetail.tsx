@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { fetchProject } from "../services/api.js";
 
 /**
@@ -51,12 +52,12 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
             Acumulado (simulado)<strong>S/ {(data.confirmedAmountCents / 100).toFixed(2)}</strong>
           </span>
         </div>
-        <a
+        <Link
           className="button button-coral"
-          href={`/proyectos/${encodeURIComponent(data.projectId)}/donar`}
+          to={`/proyectos/${encodeURIComponent(data.projectId)}/donar`}
         >
           Simular una donación <span aria-hidden="true">↗</span>
-        </a>
+        </Link>
       </div>
     </article>
   );

@@ -1,5 +1,14 @@
-import { lazy, Suspense, useState } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  Link,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { useAuth } from "./auth/AuthProvider.js";
 import { Catalog } from "./pages/Catalog.js";
 import { AuthCallback } from "./pages/AuthCallback.js";
@@ -62,7 +71,7 @@ function Header() {
           onClick={() => setOpen(false)}
         >
           <NavLink to="/proyectos">Proyectos</NavLink>
-          <a href="/#como-funciona">Cómo funciona</a>
+          <Link to="/#como-funciona">Cómo funciona</Link>
           {user && groups.includes("DONANTE") && (
             <NavLink to="/mis-donaciones">Mis donaciones</NavLink>
           )}
@@ -199,6 +208,13 @@ function HowItWorks() {
 }
 
 function Home() {
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash) {
+      document.querySelector(location.hash)?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [location]);
+
   return (
     <>
       <Hero />
