@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { fetchProjects } from "../services/api.js";
 
 function formatPen(cents: number): string {
@@ -72,12 +73,12 @@ export function Catalog() {
               max="100"
               aria-label="Progreso simulado de la meta"
             />
-            <a
+            <Link
               className="project-card-link"
-              href={`/proyectos/${encodeURIComponent(project.projectId)}`}
+              to={`/proyectos/${encodeURIComponent(project.projectId)}`}
             >
               Conocer proyecto ↗
-            </a>
+            </Link>
           </div>
         </li>
       ))}
