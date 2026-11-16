@@ -17,6 +17,10 @@ npm run typecheck
 npm test
 npm run build
 
+# SAM invoca esbuild desde el entorno del shell, no desde npm run. El proyecto lo instala
+# localmente con npm ci, así que su ejecutable debe estar disponible en PATH.
+export PATH="$PWD/node_modules/.bin:$PATH"
+
 sam build --template-file infra/template.yaml
 sam deploy \
   --template-file .aws-sam/build/template.yaml \
