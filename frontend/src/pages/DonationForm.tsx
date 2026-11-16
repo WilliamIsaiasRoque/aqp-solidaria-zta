@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { amountCentsSchema } from "../../../backend/src/shared/schemas.js";
 import { createDonation, simulateDonation, type DonationSummary } from "../services/api.js";
 
@@ -24,6 +25,7 @@ export function DonationForm({
   const [created, setCreated] = useState<DonationSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<{ payload: string; key: string } | null>(null);
+  const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
@@ -55,8 +57,12 @@ export function DonationForm({
       );
       setCreated(donation);
       pending.current = null;
-    } catch {
-      setError("No se pudo registrar la donación.");
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message === "PROJECT_GOAL_EXCEEDED"
+          ? "Ese monto supera lo que falta para alcanzar la meta de este proyecto. Ingresa un monto menor."
+          : "No se pudo registrar la donación.";
+      setError(message);
     }
   };
 
@@ -66,6 +72,10 @@ export function DonationForm({
     try {
       const updated = await simulateDonation(accessToken, created.donationId, outcome);
       setCreated(updated);
+      if (updated.status === "CONFIRMADA_SIMULADA") {
+        void queryClient.invalidateQueries({ queryKey: ["projects"] });
+        void queryClient.invalidateQueries({ queryKey: ["project", updated.projectId] });
+      }
     } catch {
       setError("No se pudo simular la confirmación.");
     }

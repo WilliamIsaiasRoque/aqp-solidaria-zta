@@ -80,6 +80,16 @@ export async function publishProject(
   return (await response.json()) as ProjectSummary;
 }
 
+/** Extrae el `code` del cuerpo de error del API (contracts/api.md), sin romper si no es JSON. */
+async function readErrorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { code?: string };
+    return body.code;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface DonationSummary {
   donationId: string;
   projectId: string;
@@ -114,7 +124,8 @@ export async function createDonation(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    throw new Error(`No se pudo registrar la donación (HTTP ${response.status}).`);
+    const code = await readErrorCode(response);
+    throw new Error(code ?? `No se pudo registrar la donación (HTTP ${response.status}).`);
   }
   return (await response.json()) as DonationSummary;
 }
