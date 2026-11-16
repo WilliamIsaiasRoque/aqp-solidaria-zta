@@ -57,6 +57,15 @@ export function createCreateDonationHandler(
         throw new ApiError(409, "PROJECT_NOT_PUBLISHED", "El proyecto no está publicado.");
       }
 
+      const remainingCents = project.goalAmountCents - project.confirmedAmountCents;
+      if (parsed.data.amountCents > remainingCents) {
+        throw new ApiError(
+          409,
+          "PROJECT_GOAL_EXCEEDED",
+          `El monto excede lo que falta para la meta del proyecto (disponible: ${remainingCents} céntimos).`,
+        );
+      }
+
       const result = await donations.create({
         projectId: parsed.data.projectId,
         amountCents: parsed.data.amountCents,

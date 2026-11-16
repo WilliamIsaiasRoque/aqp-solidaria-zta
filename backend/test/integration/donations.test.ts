@@ -209,6 +209,48 @@ describe("T05 — donante crea intención válida → 201, pendiente, sin cargo"
   });
 });
 
+describe("Donación que excede la meta del proyecto → 409", () => {
+  it("rechaza con PROJECT_GOAL_EXCEEDED cuando el monto supera lo que falta para la meta", async () => {
+    const handler = createCreateDonationHandler(
+      buildDonationsRepo(),
+      buildProjectsRepo([
+        buildPublishedProject({ goalAmountCents: 1000, confirmedAmountCents: 500 }),
+      ]),
+    );
+
+    const result = await handler(
+      buildEvent({
+        body: { projectId: "project-1", amountCents: 600 },
+        headers: { "idempotency-key": "77777777-7777-7777-7777-777777777777" },
+        authorizerClaims: DONANTE_CLAIMS,
+      }) as Parameters<typeof handler>[0],
+    );
+
+    expect(result.statusCode).toBe(409);
+    const body = JSON.parse(result.body as string);
+    expect(body.code).toBe("PROJECT_GOAL_EXCEEDED");
+  });
+
+  it("acepta un monto que cubre exactamente lo que falta para la meta", async () => {
+    const handler = createCreateDonationHandler(
+      buildDonationsRepo(),
+      buildProjectsRepo([
+        buildPublishedProject({ goalAmountCents: 1000, confirmedAmountCents: 500 }),
+      ]),
+    );
+
+    const result = await handler(
+      buildEvent({
+        body: { projectId: "project-1", amountCents: 500 },
+        headers: { "idempotency-key": "88888888-8888-8888-8888-888888888888" },
+        authorizerClaims: DONANTE_CLAIMS,
+      }) as Parameters<typeof handler>[0],
+    );
+
+    expect(result.statusCode).toBe(201);
+  });
+});
+
 describe("T06 — repite clave y payload idénticos → mismo resultado, una sola donación", () => {
   it("devuelve el mismo donationId sin crear una segunda donación (CA-05.4)", async () => {
     const donationsRepo = buildDonationsRepo();
